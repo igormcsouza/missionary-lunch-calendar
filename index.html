@@ -82,6 +82,12 @@
         color: var(--ink);
       }
 
+      .selector-controls {
+        display: inline-flex;
+        align-items: center;
+        gap: 8px;
+      }
+
       table {
         width: 100%;
         border-collapse: collapse;
@@ -300,6 +306,65 @@
         stroke: #d9e5f5;
       }
 
+      .hidden {
+        display: none !important;
+      }
+
+      .auth-wrap {
+        width: min(420px, 100%);
+        background: var(--panel);
+        border: 1px solid var(--line);
+        border-radius: 14px;
+        box-shadow: 0 14px 34px rgba(0, 0, 0, 0.45);
+        padding: 24px;
+        text-align: center;
+      }
+
+      .auth-btn {
+        border: 1px solid var(--line);
+        border-radius: 10px;
+        padding: 10px 16px;
+        background: #192636;
+        color: var(--ink);
+        font-size: 0.95rem;
+        cursor: pointer;
+      }
+
+      .auth-btn:hover {
+        border-color: #607792;
+        background: #213248;
+      }
+
+      .auth-status {
+        margin-top: 12px;
+        color: var(--subtle);
+        font-size: 0.9rem;
+      }
+
+      .signout-btn {
+        border: 1px solid var(--line);
+        border-radius: 10px;
+        width: 38px;
+        height: 38px;
+        background: #192636;
+        color: var(--ink);
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        cursor: pointer;
+      }
+
+      .signout-btn:hover {
+        border-color: #607792;
+        background: #213248;
+      }
+
+      .signout-btn svg {
+        width: 18px;
+        height: 18px;
+        stroke: #d9e5f5;
+      }
+
       @media (max-width: 900px) {
         .page {
           padding: 10px;
@@ -331,7 +396,12 @@
   </head>
   <body>
     <div class="page">
-      <main class="calendar-wrap">
+      <section id="loginView" class="auth-wrap">
+        <button id="googleLoginBtn" class="auth-btn" type="button">Login with Google</button>
+        <div id="loginStatus" class="auth-status"></div>
+      </section>
+
+      <main id="calendarView" class="calendar-wrap hidden">
         <div class="topbar">
           <div>
             <h1 class="title">Missionary Lunch Calendar</h1>
@@ -339,7 +409,16 @@
           </div>
           <div class="selector">
             <label for="monthPicker">Month / Year</label>
-            <input id="monthPicker" type="month" />
+            <div class="selector-controls">
+              <input id="monthPicker" type="month" />
+              <button id="signOutBtn" class="signout-btn" type="button" title="Sign out" aria-label="Sign out">
+                <svg viewBox="0 0 24 24" fill="none" stroke-width="1.9" xmlns="http://www.w3.org/2000/svg">
+                  <path d="M14 4h4a2 2 0 0 1 2 2v12a2 2 0 0 1-2 2h-4"></path>
+                  <path d="M10 17l-5-5 5-5"></path>
+                  <path d="M5 12h11"></path>
+                </svg>
+              </button>
+            </div>
           </div>
         </div>
 
@@ -363,9 +442,36 @@
       </main>
     </div>
 
-    <script>
+    <script type="module">
+      import { initializeApp } from "https://www.gstatic.com/firebasejs/12.10.0/firebase-app.js";
+      import {
+        getAuth,
+        GoogleAuthProvider,
+        onAuthStateChanged,
+        signInWithPopup,
+        signOut,
+      } from "https://www.gstatic.com/firebasejs/12.10.0/firebase-auth.js";
+
+      const firebaseConfig = {
+        apiKey: "AIzaSyAAV3AMIbAMePWBCt1PJ5xAPq-vG_v2d-s",
+        authDomain: "missionary-lunch-calendar.firebaseapp.com",
+        projectId: "missionary-lunch-calendar",
+        storageBucket: "missionary-lunch-calendar.firebasestorage.app",
+        messagingSenderId: "1037425270789",
+        appId: "1:1037425270789:web:ea7b3183e1241036ebbc6c",
+      };
+
+      const app = initializeApp(firebaseConfig);
+      const auth = getAuth(app);
+      const googleProvider = new GoogleAuthProvider();
+
       const DAYS = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"];
       const EXPORT_DAYS_PT = ["Segunda", "Terça", "Quarta", "Quinta", "Sexta", "Sábado", "Domingo"];
+      const loginView = document.getElementById("loginView");
+      const calendarView = document.getElementById("calendarView");
+      const googleLoginBtn = document.getElementById("googleLoginBtn");
+      const loginStatusEl = document.getElementById("loginStatus");
+      const signOutBtn = document.getElementById("signOutBtn");
       const headerRow = document.getElementById("headerRow");
       const calendarBody = document.getElementById("calendarBody");
       const monthPicker = document.getElementById("monthPicker");
@@ -374,6 +480,15 @@
       const downloadBtn = document.getElementById("downloadBtn");
       const pdayOverrides = {};
       const mutedDaysByWeek = {};
+      let isCalendarInitialized = false;
+
+      function getAuthenticatedUserId() {
+        const currentUser = auth.currentUser;
+        if (!currentUser || !currentUser.uid) {
+          return "";
+        }
+        return currentUser.uid;
+      }
 
       function showStatus(message, isError = false) {
         statusTextEl.textContent = message;
@@ -402,10 +517,19 @@
       }
 
       async function saveCell(occurrence, dayOfWeek, slot, nameValue) {
+        const userId = getAuthenticatedUserId();
+        if (!userId) {
+          showStatus("You must be logged in to save changes", true);
+          return;
+        }
+
         try {
           const response = await fetch("/api/calendar", {
             method: "POST",
-            headers: { "Content-Type": "application/json" },
+            headers: {
+              "Content-Type": "application/json",
+              "X-User-Id": userId,
+            },
             body: JSON.stringify({
               occurrence: occurrence,
               day_of_week: dayOfWeek,
@@ -641,13 +765,20 @@
         if (!monthPicker.value) {
           return;
         }
+        const userId = getAuthenticatedUserId();
+        if (!userId) {
+          showStatus("You must be logged in to load calendar", true);
+          return;
+        }
 
         const [yearStr, monthStr] = monthPicker.value.split("-");
         const year = Number(yearStr);
         const month = Number(monthStr);
 
         try {
-          const response = await fetch(`/api/calendar?year=${year}&month=${month}`);
+          const response = await fetch(`/api/calendar?year=${year}&month=${month}`, {
+            headers: { "X-User-Id": userId },
+          });
           const data = await response.json();
 
           if (!response.ok) {
@@ -880,10 +1011,35 @@
 
       monthPicker.addEventListener("change", fetchCalendar);
       downloadBtn.addEventListener("click", downloadCalendarImage);
+      googleLoginBtn.addEventListener("click", async () => {
+        loginStatusEl.textContent = "";
+        try {
+          await signInWithPopup(auth, googleProvider);
+        } catch (error) {
+          loginStatusEl.textContent = "Google sign-in failed. Try again.";
+        }
+      });
+      signOutBtn.addEventListener("click", async () => {
+        await signOut(auth);
+      });
 
-      renderHeader();
-      setDefaultMonth();
-      fetchCalendar();
+      onAuthStateChanged(auth, (user) => {
+        if (!user) {
+          calendarView.classList.add("hidden");
+          loginView.classList.remove("hidden");
+          loginStatusEl.textContent = "";
+          return;
+        }
+
+        loginView.classList.add("hidden");
+        calendarView.classList.remove("hidden");
+        if (!isCalendarInitialized) {
+          renderHeader();
+          setDefaultMonth();
+          isCalendarInitialized = true;
+        }
+        fetchCalendar();
+      });
     </script>
   </body>
 </html>

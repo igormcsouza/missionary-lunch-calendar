@@ -6,6 +6,8 @@ from http.server import BaseHTTPRequestHandler, HTTPServer
 from pathlib import Path
 from urllib.parse import parse_qs, urlparse
 
+from store import create_store
+
 
 DEFAULT_HOST = "0.0.0.0"
 DEFAULT_PORT = 5001
@@ -16,28 +18,12 @@ MAX_DISPLAY_WEEKS = 6
 MAX_OCCURRENCES = 5
 MAX_SLOTS = 2
 LOGGER = logging.getLogger("calendar_api")
+STORE = create_store(dev=True, data_file=DATA_FILE)
+LOGGED_USER_IDS = set()
 
 
-def load_entries():
-    path = Path.cwd() / DATA_FILE
-    if not path.exists():
-        return {}
-
-    try:
-        raw = json.loads(path.read_text(encoding="utf-8"))
-    except json.JSONDecodeError:
-        return {}
-
-    if not isinstance(raw, dict):
-        return {}
-
-    entries = {}
-    for key, value in raw.items():
-        if not isinstance(key, str):
-            continue
-        if isinstance(value, str):
-            entries[key] = value
-    return entries
+def load_entries(user_id):
+    return STORE.load_entries(user_id)
 
 
 def get_cell_names(entries, occurrence, day_of_week):
@@ -55,9 +41,8 @@ def get_cell_names(entries, occurrence, day_of_week):
     return {"first": first, "second": second}
 
 
-def save_entries(entries):
-    path = Path.cwd() / DATA_FILE
-    path.write_text(json.dumps(entries, indent=2), encoding="utf-8")
+def save_entries(user_id, entries):
+    STORE.save_entries(user_id, entries)
 
 
 def build_day_lookup(year, month):
@@ -125,6 +110,15 @@ def build_calendar_payload(year, month, entries):
 
 
 class CalendarHandler(BaseHTTPRequestHandler):
+    def get_user_id(self):
+        user_id = self.headers.get("X-User-Id", "").strip()
+        if not user_id:
+            return None
+        if user_id not in LOGGED_USER_IDS:
+            LOGGED_USER_IDS.add(user_id)
+            LOGGER.info("Authenticated user uid=%s", user_id)
+        return user_id
+
     def send_json(self, status_code, payload):
         body = json.dumps(payload).encode("utf-8")
         self.send_response(status_code)
@@ -158,6 +152,11 @@ class CalendarHandler(BaseHTTPRequestHandler):
             self.send_json(404, {"status": "error", "error": "Not found"})
             return
 
+        user_id = self.get_user_id()
+        if not user_id:
+            self.send_json(401, {"status": "error", "error": "User not authenticated"})
+            return
+
         query = parse_qs(parsed.query)
         try:
             year = int(query.get("year", [str(date.today().year)])[0])
@@ -172,14 +171,19 @@ class CalendarHandler(BaseHTTPRequestHandler):
             self.send_json(400, {"status": "error", "error": "Month must be between 1 and 12"})
             return
 
-        entries = load_entries()
-        LOGGER.info("GET /api/calendar year=%s month=%s", year, month)
+        entries = load_entries(user_id)
+        LOGGER.info("GET /api/calendar user_id=%s year=%s month=%s", user_id, year, month)
         self.send_json(200, build_calendar_payload(year, month, entries))
 
     def do_POST(self):
         parsed = urlparse(self.path)
         if parsed.path != "/api/calendar":
             self.send_json(404, {"status": "error", "error": "Not found"})
+            return
+
+        user_id = self.get_user_id()
+        if not user_id:
+            self.send_json(401, {"status": "error", "error": "User not authenticated"})
             return
 
         content_length = int(self.headers.get("Content-Length", "0"))
@@ -217,7 +221,7 @@ class CalendarHandler(BaseHTTPRequestHandler):
             self.send_json(400, {"status": "error", "error": "slot must be between 1 and 2"})
             return
 
-        entries = load_entries()
+        entries = load_entries(user_id)
         base_key = f"{occurrence}:{day_of_week}"
         key = f"{base_key}:{slot}"
         if name:
@@ -226,9 +230,10 @@ class CalendarHandler(BaseHTTPRequestHandler):
             entries.pop(key, None)
         # Migrate legacy key once any slot is edited.
         entries.pop(base_key, None)
-        save_entries(entries)
+        save_entries(user_id, entries)
         LOGGER.info(
-            "POST /api/calendar saved occurrence=%s day_of_week=%s slot=%s has_name=%s",
+            "POST /api/calendar user_id=%s saved occurrence=%s day_of_week=%s slot=%s has_name=%s",
+            user_id,
             occurrence,
             day_of_week,
             slot,
@@ -253,15 +258,19 @@ class CalendarHandler(BaseHTTPRequestHandler):
 
 
 def main():
+    global STORE
+
     parser = argparse.ArgumentParser(description="Run the missionary lunch calendar server.")
     parser.add_argument("--host", default=DEFAULT_HOST, help=f"Host interface to bind (default: {DEFAULT_HOST})")
     parser.add_argument("--port", type=int, default=DEFAULT_PORT, help=f"Port to listen on (default: {DEFAULT_PORT})")
+    parser.add_argument("--dev", action="store_true", help="Enable development mode")
     args = parser.parse_args()
 
     logging.basicConfig(
         level=logging.INFO,
         format="%(asctime)s %(levelname)s %(name)s - %(message)s",
     )
+    STORE = create_store(dev=args.dev, data_file=DATA_FILE)
     server = HTTPServer((args.host, args.port), CalendarHandler)
     LOGGER.info("Running at http://%s:%s", args.host, args.port)
     try:
