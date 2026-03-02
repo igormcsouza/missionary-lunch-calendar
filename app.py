@@ -1,3 +1,4 @@
+import argparse
 import json
 import logging
 from datetime import date
@@ -6,7 +7,8 @@ from pathlib import Path
 from urllib.parse import parse_qs, urlparse
 
 
-PORT = 5001
+DEFAULT_HOST = "0.0.0.0"
+DEFAULT_PORT = 5001
 INDEX_FILE = "index.html"
 DATA_FILE = "calendar_data.json"
 DAYS = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"]
@@ -251,12 +253,17 @@ class CalendarHandler(BaseHTTPRequestHandler):
 
 
 def main():
+    parser = argparse.ArgumentParser(description="Run the missionary lunch calendar server.")
+    parser.add_argument("--host", default=DEFAULT_HOST, help=f"Host interface to bind (default: {DEFAULT_HOST})")
+    parser.add_argument("--port", type=int, default=DEFAULT_PORT, help=f"Port to listen on (default: {DEFAULT_PORT})")
+    args = parser.parse_args()
+
     logging.basicConfig(
         level=logging.INFO,
         format="%(asctime)s %(levelname)s %(name)s - %(message)s",
     )
-    server = HTTPServer(("0.0.0.0", PORT), CalendarHandler)
-    print(f"Listening on http://0.0.0.0:{PORT}")
+    server = HTTPServer((args.host, args.port), CalendarHandler)
+    LOGGER.info("Running at http://%s:%s", args.host, args.port)
     try:
         server.serve_forever()
     except KeyboardInterrupt:
