@@ -1,4 +1,5 @@
 import json
+import logging
 from datetime import date
 from http.server import BaseHTTPRequestHandler, HTTPServer
 from pathlib import Path
@@ -12,6 +13,7 @@ DAYS = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sun
 MAX_DISPLAY_WEEKS = 6
 MAX_OCCURRENCES = 5
 MAX_SLOTS = 2
+LOGGER = logging.getLogger("calendar_api")
 
 
 def load_entries():
@@ -159,14 +161,17 @@ class CalendarHandler(BaseHTTPRequestHandler):
             year = int(query.get("year", [str(date.today().year)])[0])
             month = int(query.get("month", [str(date.today().month)])[0])
         except ValueError:
+            LOGGER.warning("GET /api/calendar invalid month/year query=%s", parsed.query)
             self.send_json(400, {"status": "error", "error": "Invalid month/year"})
             return
 
         if month < 1 or month > 12:
+            LOGGER.warning("GET /api/calendar invalid month=%s year=%s", month, year)
             self.send_json(400, {"status": "error", "error": "Month must be between 1 and 12"})
             return
 
         entries = load_entries()
+        LOGGER.info("GET /api/calendar year=%s month=%s", year, month)
         self.send_json(200, build_calendar_payload(year, month, entries))
 
     def do_POST(self):
@@ -181,6 +186,7 @@ class CalendarHandler(BaseHTTPRequestHandler):
         try:
             data = json.loads(raw_body.decode("utf-8")) if raw_body else {}
         except json.JSONDecodeError:
+            LOGGER.warning("POST /api/calendar invalid json")
             self.send_json(400, {"status": "error", "error": "Invalid JSON"})
             return
 
@@ -190,18 +196,22 @@ class CalendarHandler(BaseHTTPRequestHandler):
         name = str(data.get("name", "")).strip()
 
         if day_of_week not in DAYS:
+            LOGGER.warning("POST /api/calendar invalid day_of_week=%s", day_of_week)
             self.send_json(400, {"status": "error", "error": "Invalid day_of_week"})
             return
 
         if day_of_week == "Monday":
+            LOGGER.warning("POST /api/calendar rejected monday occurrence=%s slot=%s", occurrence, slot)
             self.send_json(400, {"status": "error", "error": "Monday is fixed to PDAY"})
             return
 
         if not isinstance(occurrence, int) or occurrence < 1 or occurrence > MAX_OCCURRENCES:
+            LOGGER.warning("POST /api/calendar invalid occurrence=%s day_of_week=%s", occurrence, day_of_week)
             self.send_json(400, {"status": "error", "error": "occurrence must be between 1 and 5"})
             return
 
         if not isinstance(slot, int) or slot < 1 or slot > MAX_SLOTS:
+            LOGGER.warning("POST /api/calendar invalid slot=%s day_of_week=%s occurrence=%s", slot, day_of_week, occurrence)
             self.send_json(400, {"status": "error", "error": "slot must be between 1 and 2"})
             return
 
@@ -215,6 +225,13 @@ class CalendarHandler(BaseHTTPRequestHandler):
         # Migrate legacy key once any slot is edited.
         entries.pop(base_key, None)
         save_entries(entries)
+        LOGGER.info(
+            "POST /api/calendar saved occurrence=%s day_of_week=%s slot=%s has_name=%s",
+            occurrence,
+            day_of_week,
+            slot,
+            bool(name),
+        )
 
         self.send_json(
             200,
@@ -234,6 +251,10 @@ class CalendarHandler(BaseHTTPRequestHandler):
 
 
 def main():
+    logging.basicConfig(
+        level=logging.INFO,
+        format="%(asctime)s %(levelname)s %(name)s - %(message)s",
+    )
     server = HTTPServer(("0.0.0.0", PORT), CalendarHandler)
     print(f"Listening on http://0.0.0.0:{PORT}")
     try:
