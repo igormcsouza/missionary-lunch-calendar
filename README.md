@@ -1,4 +1,4 @@
-# Missionary Launch Calendar
+# Missionary Lunch Calendar
 
 [![Pylint](https://github.com/igormcsouza/missionary-lunch-calendar/actions/workflows/pylint.yml/badge.svg)](https://github.com/igormcsouza/missionary-lunch-calendar/actions/workflows/pylint.yml)
 
@@ -6,7 +6,7 @@ This application aims to solve an issue of creating a calendar to the members of
 
 ## Next steps...
 
-I'm happy to keep updating this project and adding more features, if anyone is interested in giving adivices just open the issue and I'm going to analyse and implement if it is necessary!
+I'm happy to keep updating this project and adding more features, if anyone is interested in giving advice just open the issue and I'm going to analyse and implement if it is necessary!
 
 ## How to start the development server
 
@@ -18,6 +18,6 @@ nodemon --ext py --exec "python3 app.py --dev --host localhost"
 
 Make sure to use `--dev` to let the application know that no firestore connection is necessary... And add `--host` to allow firebase to authenticate correctly.
 
-The application will start and restart everytime there is a change to the `.py` file. If somebody change the `.html` file it automatically update the UI.
+The application will start and restart every time there is a change to the `.py` file. If there are changes to the `.html` file it the UI will catch it.
 
 There is also a Dockerfile so that people can use all the features from firebase.
