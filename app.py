@@ -1,3 +1,4 @@
+"""HTTP server for the missionary lunch calendar application."""
 import argparse
 import json
 import logging
@@ -23,10 +24,12 @@ LOGGED_USER_IDS = set()
 
 
 def load_entries(user_id):
+    """Load calendar entries for the given user ID."""
     return STORE.load_entries(user_id)
 
 
 def get_cell_names(entries, occurrence, day_of_week):
+    """Return the first and second slot names for a calendar cell."""
     if not occurrence:
         return {"first": "", "second": ""}
 
@@ -42,10 +45,12 @@ def get_cell_names(entries, occurrence, day_of_week):
 
 
 def save_entries(user_id, entries):
+    """Persist calendar entries for the given user ID."""
     STORE.save_entries(user_id, entries)
 
 
 def build_day_lookup(year, month):
+    """Build a mapping of (week_number, day_name) to day metadata for a month."""
     day_lookup = {}
     week_number = 1
     day = 1
@@ -72,6 +77,7 @@ def build_day_lookup(year, month):
 
 
 def build_calendar_payload(year, month, entries):
+    """Construct the full calendar JSON payload for the given month."""
     day_lookup = build_day_lookup(year, month)
     weeks = []
     for week_number in range(1, MAX_DISPLAY_WEEKS + 1):
@@ -110,7 +116,10 @@ def build_calendar_payload(year, month, entries):
 
 
 class CalendarHandler(BaseHTTPRequestHandler):
+    """HTTP request handler for the calendar API."""
+
     def get_user_id(self):
+        """Extract and return the authenticated user ID from request headers."""
         user_id = self.headers.get("X-User-Id", "").strip()
         if not user_id:
             return None
@@ -120,6 +129,7 @@ class CalendarHandler(BaseHTTPRequestHandler):
         return user_id
 
     def send_json(self, status_code, payload):
+        """Serialize payload as JSON and send an HTTP response."""
         body = json.dumps(payload).encode("utf-8")
         self.send_response(status_code)
         self.send_header("Content-Type", "application/json; charset=utf-8")
@@ -128,6 +138,7 @@ class CalendarHandler(BaseHTTPRequestHandler):
         self.wfile.write(body)
 
     def send_index(self):
+        """Serve the index.html file."""
         index_path = Path.cwd() / INDEX_FILE
         if not index_path.exists():
             self.send_response(404)
@@ -141,7 +152,8 @@ class CalendarHandler(BaseHTTPRequestHandler):
         self.end_headers()
         self.wfile.write(index_path.read_bytes())
 
-    def do_GET(self):
+    def do_GET(self):  # pylint: disable=invalid-name
+        """Handle GET requests for the calendar API."""
         parsed = urlparse(self.path)
 
         if parsed.path == "/":
@@ -175,7 +187,8 @@ class CalendarHandler(BaseHTTPRequestHandler):
         LOGGER.info("GET /api/calendar user_id=%s year=%s month=%s", user_id, year, month)
         self.send_json(200, build_calendar_payload(year, month, entries))
 
-    def do_POST(self):
+    def do_POST(self):  # pylint: disable=invalid-name,too-many-return-statements
+        """Handle POST requests to update calendar entries."""
         parsed = urlparse(self.path)
         if parsed.path != "/api/calendar":
             self.send_json(404, {"status": "error", "error": "Not found"})
@@ -207,17 +220,26 @@ class CalendarHandler(BaseHTTPRequestHandler):
             return
 
         if day_of_week == "Monday":
-            LOGGER.warning("POST /api/calendar rejected monday occurrence=%s slot=%s", occurrence, slot)
+            LOGGER.warning(
+                "POST /api/calendar rejected monday occurrence=%s slot=%s",
+                occurrence, slot,
+            )
             self.send_json(400, {"status": "error", "error": "Monday is fixed to PDAY"})
             return
 
         if not isinstance(occurrence, int) or occurrence < 1 or occurrence > MAX_OCCURRENCES:
-            LOGGER.warning("POST /api/calendar invalid occurrence=%s day_of_week=%s", occurrence, day_of_week)
+            LOGGER.warning(
+                "POST /api/calendar invalid occurrence=%s day_of_week=%s",
+                occurrence, day_of_week,
+            )
             self.send_json(400, {"status": "error", "error": "occurrence must be between 1 and 5"})
             return
 
         if not isinstance(slot, int) or slot < 1 or slot > MAX_SLOTS:
-            LOGGER.warning("POST /api/calendar invalid slot=%s day_of_week=%s occurrence=%s", slot, day_of_week, occurrence)
+            LOGGER.warning(
+                "POST /api/calendar invalid slot=%s day_of_week=%s occurrence=%s",
+                slot, day_of_week, occurrence,
+            )
             self.send_json(400, {"status": "error", "error": "slot must be between 1 and 2"})
             return
 
@@ -253,16 +275,23 @@ class CalendarHandler(BaseHTTPRequestHandler):
             },
         )
 
-    def log_message(self, fmt, *args):
-        return
+    def log_message(self, _fmt, *args):  # pylint: disable=arguments-differ
+        """Suppress default HTTP server console logging."""
 
 
 def main():
-    global STORE
+    """Parse arguments, configure logging, and start the HTTP server."""
+    global STORE  # pylint: disable=global-statement
 
     parser = argparse.ArgumentParser(description="Run the missionary lunch calendar server.")
-    parser.add_argument("--host", default=DEFAULT_HOST, help=f"Host interface to bind (default: {DEFAULT_HOST})")
-    parser.add_argument("--port", type=int, default=DEFAULT_PORT, help=f"Port to listen on (default: {DEFAULT_PORT})")
+    parser.add_argument(
+        "--host", default=DEFAULT_HOST,
+        help=f"Host interface to bind (default: {DEFAULT_HOST})",
+    )
+    parser.add_argument(
+        "--port", type=int, default=DEFAULT_PORT,
+        help=f"Port to listen on (default: {DEFAULT_PORT})",
+    )
     parser.add_argument("--dev", action="store_true", help="Enable development mode")
     args = parser.parse_args()
 

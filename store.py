@@ -1,9 +1,11 @@
+"""Storage backends for the missionary lunch calendar application."""
 import json
 import os
 from pathlib import Path
 
 
 class JsonFileStore:
+    """File-based JSON store for local/development use."""
     def __init__(self, data_file):
         self.path = Path.cwd() / data_file
 
@@ -39,6 +41,7 @@ class JsonFileStore:
         return users_map
 
     def load_entries(self, user_id):
+        """Load and return the calendar entries dict for the given user ID."""
         raw = self._read_raw()
         if not raw:
             return {}
@@ -49,6 +52,7 @@ class JsonFileStore:
         return users_map.get(user_id, {})
 
     def save_entries(self, user_id, entries):
+        """Persist the calendar entries dict for the given user ID."""
         raw = self._read_raw()
         users_map = {}
         if raw and not self._is_legacy_entries_shape(raw):
@@ -59,10 +63,12 @@ class JsonFileStore:
 
 
 class FirestoreStore:
+    """Cloud Firestore-backed store for production use."""
+
     def __init__(self):
         try:
-            from google.cloud import firestore
-            from google.oauth2 import service_account
+            from google.cloud import firestore  # pylint: disable=import-outside-toplevel
+            from google.oauth2 import service_account  # pylint: disable=import-outside-toplevel
         except ImportError as exc:
             raise RuntimeError(
                 "google-cloud-firestore is required for non-dev mode. "
@@ -89,7 +95,9 @@ class FirestoreStore:
             except json.JSONDecodeError as exc:
                 raise RuntimeError("GOOGLE_APPLICATION_CREDENTIALS_JSON is not valid JSON") from exc
 
-            credentials = self._service_account.Credentials.from_service_account_info(service_account_info)
+            credentials = self._service_account.Credentials.from_service_account_info(
+                service_account_info
+            )
             resolved_project_id = project_id or service_account_info.get("project_id")
             return self._firestore.Client(project=resolved_project_id, credentials=credentials)
 
@@ -108,6 +116,7 @@ class FirestoreStore:
         return self._client.collection(self._collection_name).document(user_id)
 
     def load_entries(self, user_id):
+        """Load and return the calendar entries dict for the given user ID."""
         snapshot = self._doc_ref(user_id).get()
         if not snapshot.exists:
             return {}
@@ -116,11 +125,13 @@ class FirestoreStore:
         return self._sanitize_entries(entries)
 
     def save_entries(self, user_id, entries):
+        """Persist the calendar entries dict for the given user ID."""
         clean_entries = self._sanitize_entries(entries)
         self._doc_ref(user_id).set({"entries": clean_entries}, merge=True)
 
 
 def create_store(dev=False, data_file="calendar_data.json"):
+    """Create and return the appropriate store backend based on the dev flag."""
     if dev:
         return JsonFileStore(data_file)
     return FirestoreStore()
