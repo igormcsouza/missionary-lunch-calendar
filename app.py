@@ -28,6 +28,16 @@ def load_entries(user_id):
     return STORE.load_entries(user_id)
 
 
+def load_settings(user_id):
+    """Load settings for the given user ID."""
+    return STORE.load_settings(user_id)
+
+
+def save_settings(user_id, settings):
+    """Persist settings for the given user ID."""
+    STORE.save_settings(user_id, settings)
+
+
 def get_cell_names(entries, occurrence, day_of_week):
     """Return the first and second slot names for a calendar cell."""
     if not occurrence:
@@ -160,6 +170,10 @@ class CalendarHandler(BaseHTTPRequestHandler):
             self.send_index()
             return
 
+        if parsed.path == "/api/settings":
+            self._handle_get_settings()
+            return
+
         if parsed.path != "/api/calendar":
             self.send_json(404, {"status": "error", "error": "Not found"})
             return
@@ -187,9 +201,45 @@ class CalendarHandler(BaseHTTPRequestHandler):
         LOGGER.info("GET /api/calendar user_id=%s year=%s month=%s", user_id, year, month)
         self.send_json(200, build_calendar_payload(year, month, entries))
 
+    def _handle_get_settings(self):
+        """Handle GET /api/settings."""
+        user_id = self.get_user_id()
+        if not user_id:
+            self.send_json(401, {"status": "error", "error": "User not authenticated"})
+            return
+        settings = load_settings(user_id)
+        LOGGER.info("GET /api/settings user_id=%s", user_id)
+        self.send_json(200, {"status": "ok", "settings": settings})
+
+    def _handle_post_settings(self):
+        """Handle POST /api/settings."""
+        user_id = self.get_user_id()
+        if not user_id:
+            self.send_json(401, {"status": "error", "error": "User not authenticated"})
+            return
+        content_length = int(self.headers.get("Content-Length", "0"))
+        raw_body = self.rfile.read(content_length)
+        try:
+            data = json.loads(raw_body.decode("utf-8")) if raw_body else {}
+        except json.JSONDecodeError:
+            self.send_json(400, {"status": "error", "error": "Invalid JSON"})
+            return
+        ward = str(data.get("ward", "")).strip()
+        settings = load_settings(user_id)
+        if ward:
+            settings["ward"] = ward
+        else:
+            settings.pop("ward", None)
+        save_settings(user_id, settings)
+        LOGGER.info("POST /api/settings user_id=%s ward=%r", user_id, ward)
+        self.send_json(200, {"status": "ok", "settings": settings})
+
     def do_POST(self):  # pylint: disable=invalid-name,too-many-return-statements
         """Handle POST requests to update calendar entries."""
         parsed = urlparse(self.path)
+        if parsed.path == "/api/settings":
+            self._handle_post_settings()
+            return
         if parsed.path != "/api/calendar":
             self.send_json(404, {"status": "error", "error": "Not found"})
             return

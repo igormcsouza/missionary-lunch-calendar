@@ -1,9 +1,9 @@
 <!doctype html>
-<html lang="en">
+<html lang="pt-BR">
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Missionary Lunch Calendar</title>
+    <title>Calendário de Almoço Missionário</title>
     <style>
       :root {
         --bg: #0c121b;
@@ -73,6 +73,13 @@
         color: var(--subtle);
       }
 
+      .month-picker-wrap {
+        display: flex;
+        flex-direction: column;
+        align-items: flex-end;
+        gap: 4px;
+      }
+
       .selector input {
         border: 1px solid var(--line);
         border-radius: 8px;
@@ -80,6 +87,7 @@
         font-size: 0.95rem;
         background: #0f1823;
         color: var(--ink);
+        color-scheme: dark;
       }
 
       .selector-controls {
@@ -328,6 +336,9 @@
         color: var(--ink);
         font-size: 0.95rem;
         cursor: pointer;
+        display: inline-flex;
+        align-items: center;
+        gap: 8px;
       }
 
       .auth-btn:hover {
@@ -392,26 +403,91 @@
           font-size: 0.85rem;
         }
       }
+
+      .modal-overlay {
+        position: fixed;
+        inset: 0;
+        background: rgba(0, 0, 0, 0.6);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        z-index: 100;
+      }
+
+      .modal-box {
+        background: var(--panel);
+        border: 1px solid var(--line);
+        border-radius: 14px;
+        padding: 24px;
+        width: min(360px, 90%);
+      }
+
+      .modal-box h3 {
+        margin: 0 0 16px;
+        font-size: 1.1rem;
+      }
+
+      .modal-field {
+        margin-bottom: 16px;
+      }
+
+      .modal-field label {
+        display: block;
+        margin-bottom: 6px;
+        font-size: 0.9rem;
+        color: var(--subtle);
+      }
+
+      .modal-field input {
+        width: 100%;
+        border: 1px solid var(--line);
+        border-radius: 8px;
+        padding: 8px 10px;
+        font-size: 0.95rem;
+        background: #0f1823;
+        color: var(--ink);
+      }
+
+      .modal-actions {
+        display: flex;
+        justify-content: flex-end;
+        gap: 8px;
+      }
+
+      .status-actions {
+        display: inline-flex;
+        gap: 8px;
+      }
     </style>
   </head>
   <body>
     <div class="page">
       <section id="loginView" class="auth-wrap">
-        <button id="googleLoginBtn" class="auth-btn" type="button">Login with Google</button>
+        <button id="googleLoginBtn" class="auth-btn" type="button">
+          <svg width="18" height="18" viewBox="0 0 48 48" xmlns="http://www.w3.org/2000/svg">
+            <path fill="#EA4335" d="M24 9.5c3.54 0 6.71 1.22 9.21 3.6l6.85-6.85C35.9 2.38 30.47 0 24 0 14.62 0 6.51 5.38 2.56 13.22l7.98 6.19C12.43 13.72 17.74 9.5 24 9.5z"/>
+            <path fill="#4285F4" d="M46.98 24.55c0-1.57-.15-3.09-.38-4.55H24v9.02h12.94c-.58 2.96-2.26 5.48-4.78 7.18l7.73 6c4.51-4.18 7.09-10.36 7.09-17.65z"/>
+            <path fill="#FBBC05" d="M10.53 28.59c-.48-1.45-.76-2.99-.76-4.59s.27-3.14.76-4.59l-7.98-6.19C.92 16.46 0 20.12 0 24c0 3.88.92 7.54 2.56 10.78l7.97-6.19z"/>
+            <path fill="#34A853" d="M24 48c6.48 0 11.93-2.13 15.89-5.81l-7.73-6c-2.18 1.48-4.97 2.31-8.16 2.31-6.26 0-11.57-4.22-13.47-9.91l-7.98 6.19C6.51 42.62 14.62 48 24 48z"/>
+          </svg>
+          Entrar com Google
+        </button>
         <div id="loginStatus" class="auth-status"></div>
       </section>
 
       <main id="calendarView" class="calendar-wrap hidden">
         <div class="topbar">
           <div>
-            <h1 class="title">Missionary Lunch Calendar</h1>
-            <p class="subtitle">Add the name of the families on the boxes below on the use to day of the week the family gives Lunch to the Missionaries</p>
+            <h1 class="title">Calendário de Almoço Missionário</h1>
+            <p class="subtitle">Adicione o nome das famílias nos dias da semana em que elas oferecem almoço aos Missionários</p>
           </div>
           <div class="selector">
-            <label for="monthPicker">Month / Year</label>
             <div class="selector-controls">
-              <input id="monthPicker" type="month" />
-              <button id="signOutBtn" class="signout-btn" type="button" title="Sign out" aria-label="Sign out">
+              <div class="month-picker-wrap">
+                <label for="monthPicker">Mês / Ano</label>
+                <input id="monthPicker" type="month" />
+              </div>
+              <button id="signOutBtn" class="signout-btn" type="button" title="Sair" aria-label="Sair">
                 <svg viewBox="0 0 24 24" fill="none" stroke-width="1.9" xmlns="http://www.w3.org/2000/svg">
                   <path d="M14 4h4a2 2 0 0 1 2 2v12a2 2 0 0 1-2 2h-4"></path>
                   <path d="M10 17l-5-5 5-5"></path>
@@ -431,15 +507,37 @@
 
         <div id="status" class="status">
           <span id="statusText"></span>
-          <button id="downloadBtn" class="icon-btn" type="button" title="Download calendar as PNG" aria-label="Download calendar as PNG">
-            <svg viewBox="0 0 24 24" fill="none" stroke-width="1.8" xmlns="http://www.w3.org/2000/svg">
-              <rect x="3.5" y="5" width="17" height="14" rx="2.5"></rect>
-              <circle cx="9" cy="10" r="1.5"></circle>
-              <path d="M6.5 16l4-4 2.2 2.2 2.7-2.7 2.1 2.5"></path>
-            </svg>
-          </button>
+          <div class="status-actions">
+            <button id="settingsBtn" class="icon-btn" type="button" title="Configurações" aria-label="Configurações">
+              <svg viewBox="0 0 24 24" fill="none" stroke-width="1.8" xmlns="http://www.w3.org/2000/svg">
+                <circle cx="12" cy="12" r="3"></circle>
+                <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"></path>
+              </svg>
+            </button>
+            <button id="downloadBtn" class="icon-btn" type="button" title="Baixar calendário como PNG" aria-label="Baixar calendário como PNG">
+              <svg viewBox="0 0 24 24" fill="none" stroke-width="1.8" xmlns="http://www.w3.org/2000/svg">
+                <rect x="3.5" y="5" width="17" height="14" rx="2.5"></rect>
+                <circle cx="9" cy="10" r="1.5"></circle>
+                <path d="M6.5 16l4-4 2.2 2.2 2.7-2.7 2.1 2.5"></path>
+              </svg>
+            </button>
+          </div>
         </div>
       </main>
+    </div>
+
+    <div id="settingsModal" class="modal-overlay hidden">
+      <div class="modal-box">
+        <h3>Configurações</h3>
+        <div class="modal-field">
+          <label for="wardInput">Ala</label>
+          <input id="wardInput" type="text" placeholder="Ex: Eusébio" />
+        </div>
+        <div class="modal-actions">
+          <button id="cancelSettingsBtn" class="auth-btn" type="button">Cancelar</button>
+          <button id="saveSettingsBtn" class="auth-btn" type="button">Salvar</button>
+        </div>
+      </div>
     </div>
 
     <script type="module">
@@ -478,9 +576,15 @@
       const statusEl = document.getElementById("status");
       const statusTextEl = document.getElementById("statusText");
       const downloadBtn = document.getElementById("downloadBtn");
+      const settingsBtn = document.getElementById("settingsBtn");
+      const settingsModal = document.getElementById("settingsModal");
+      const wardInput = document.getElementById("wardInput");
+      const saveSettingsBtn = document.getElementById("saveSettingsBtn");
+      const cancelSettingsBtn = document.getElementById("cancelSettingsBtn");
       const pdayOverrides = {};
       const mutedDaysByWeek = {};
       let isCalendarInitialized = false;
+      let currentWard = "";
 
       function getAuthenticatedUserId() {
         const currentUser = auth.currentUser;
@@ -506,10 +610,10 @@
         headerRow.innerHTML = "";
         const weekTh = document.createElement("th");
         weekTh.className = "week-head";
-        weekTh.textContent = "Week";
+        weekTh.textContent = "Sem";
         headerRow.appendChild(weekTh);
 
-        for (const day of DAYS) {
+        for (const day of EXPORT_DAYS_PT) {
           const th = document.createElement("th");
           th.textContent = day;
           headerRow.appendChild(th);
@@ -519,7 +623,7 @@
       async function saveCell(occurrence, dayOfWeek, slot, nameValue) {
         const userId = getAuthenticatedUserId();
         if (!userId) {
-          showStatus("You must be logged in to save changes", true);
+          showStatus("Você precisa estar logado para salvar", true);
           return;
         }
 
@@ -540,13 +644,13 @@
 
           const data = await response.json();
           if (!response.ok) {
-            showStatus(data.error || "Failed to save", true);
+            showStatus(data.error || "Erro ao salvar", true);
             return;
           }
 
-          showStatus(`Saved ${dayOfWeek} (${occurrence}${ordinalSuffix(occurrence)} occurrence, box ${slot}) as "${nameValue || ""}"`);
+          showStatus(`Salvo: ${EXPORT_DAYS_PT[DAYS.indexOf(dayOfWeek)] ?? dayOfWeek}, ocorrência ${occurrence}, slot ${slot} – "${nameValue || ""}"`);
         } catch (error) {
-          showStatus("Network error while saving", true);
+          showStatus("Erro de rede ao salvar", true);
         }
       }
 
@@ -687,7 +791,7 @@
               pdayToggle.type = "button";
               pdayToggle.className = "pday-toggle";
               pdayToggle.textContent = "P";
-              pdayToggle.title = "Set PDAY for this week";
+              pdayToggle.title = "Definir PDAY para esta semana";
               pdayToggle.addEventListener("click", (event) => {
                 event.preventDefault();
                 event.stopPropagation();
@@ -699,7 +803,7 @@
               muteToggle.type = "button";
               muteToggle.className = "mute-toggle";
               muteToggle.textContent = "M";
-              muteToggle.title = "Mute this day for export";
+              muteToggle.title = "Silenciar este dia para exportação";
               muteToggle.addEventListener("click", (event) => {
                 event.preventDefault();
                 event.stopPropagation();
@@ -723,7 +827,7 @@
             } else if (cellData.day_number === null) {
               const empty = document.createElement("div");
               empty.className = "empty-day";
-              empty.textContent = "No date in this month";
+              empty.textContent = "Sem data neste mês";
               box.appendChild(empty);
             } else {
               const pdayLabel = document.createElement("div");
@@ -740,7 +844,7 @@
                 input.className = slot === 2 ? "name-input secondary" : "name-input";
                 input.type = "text";
                 input.value = slot === 1 ? firstValue : secondValue;
-                input.placeholder = `Type a name (${slot})`;
+                input.placeholder = `Digite um nome (${slot})`;
                 input.addEventListener("change", () => {
                   if (cellData.occurrence) {
                     saveCell(cellData.occurrence, cellData.day_of_week, slot, input.value.trim());
@@ -767,7 +871,7 @@
         }
         const userId = getAuthenticatedUserId();
         if (!userId) {
-          showStatus("You must be logged in to load calendar", true);
+          showStatus("Você precisa estar logado para carregar o calendário", true);
           return;
         }
 
@@ -782,16 +886,16 @@
           const data = await response.json();
 
           if (!response.ok) {
-            showStatus(data.error || "Failed to load calendar", true);
+            showStatus(data.error || "Erro ao carregar calendário", true);
             return;
           }
 
           Object.keys(pdayOverrides).forEach((key) => delete pdayOverrides[key]);
           Object.keys(mutedDaysByWeek).forEach((key) => delete mutedDaysByWeek[key]);
           renderCalendar(data.weeks);
-          showStatus(`Showing ${String(month).padStart(2, "0")}/${year}`);
+          showStatus(`Exibindo ${String(month).padStart(2, "0")}/${year}`);
         } catch (error) {
-          showStatus("Network error while loading calendar", true);
+          showStatus("Erro de rede ao carregar calendário", true);
         }
       }
 
@@ -987,6 +1091,7 @@
         const legendY = gridY + gridH + 24;
         const squareSize = 12;
         const legendStartX = gridX + 10;
+        const ward = currentWard || "Ala";
 
         ctx.textAlign = "left";
         ctx.textBaseline = "middle";
@@ -994,29 +1099,75 @@
         ctx.fillRect(legendStartX, legendY - squareSize / 2, squareSize, squareSize);
         ctx.fillStyle = "#1a2433";
         ctx.font = "bold 14px Segoe UI, Tahoma, sans-serif";
-        ctx.fillText("Eusébio A", legendStartX + squareSize + 8, legendY);
+        ctx.fillText(`${ward} A`, legendStartX + squareSize + 8, legendY);
 
         const secondLegendX = legendStartX + 150;
         ctx.fillStyle = "#d6a800";
         ctx.fillRect(secondLegendX, legendY - squareSize / 2, squareSize, squareSize);
         ctx.fillStyle = "#1a2433";
-        ctx.fillText("Eusébio B", secondLegendX + squareSize + 8, legendY);
+        ctx.fillText(`${ward} B`, secondLegendX + squareSize + 8, legendY);
 
         const link = document.createElement("a");
         link.href = canvas.toDataURL("image/png");
         link.download = `calendar-${dateStamp}.png`;
         link.click();
-        showStatus(`Downloaded calendar-${dateStamp}.png`);
+        showStatus(`Baixado: calendar-${dateStamp}.png`);
+      }
+
+      async function loadSettings() {
+        const userId = getAuthenticatedUserId();
+        if (!userId) return;
+        try {
+          const resp = await fetch("/api/settings", { headers: { "X-User-Id": userId } });
+          if (resp.ok) {
+            const data = await resp.json();
+            currentWard = data.settings?.ward || "";
+            wardInput.value = currentWard;
+          }
+        } catch (err) {
+          console.warn("Falha ao carregar configurações:", err);
+        }
+      }
+
+      async function persistSettings() {
+        const userId = getAuthenticatedUserId();
+        if (!userId) return;
+        const ward = wardInput.value.trim();
+        try {
+          const resp = await fetch("/api/settings", {
+            method: "POST",
+            headers: { "Content-Type": "application/json", "X-User-Id": userId },
+            body: JSON.stringify({ ward }),
+          });
+          if (resp.ok) {
+            currentWard = ward;
+            settingsModal.classList.add("hidden");
+            showStatus("Configurações salvas");
+          } else {
+            showStatus("Erro ao salvar configurações", true);
+          }
+        } catch (_) {
+          showStatus("Erro ao salvar configurações", true);
+        }
       }
 
       monthPicker.addEventListener("change", fetchCalendar);
       downloadBtn.addEventListener("click", downloadCalendarImage);
+      settingsBtn.addEventListener("click", () => {
+        wardInput.value = currentWard;
+        settingsModal.classList.remove("hidden");
+      });
+      saveSettingsBtn.addEventListener("click", persistSettings);
+      cancelSettingsBtn.addEventListener("click", () => settingsModal.classList.add("hidden"));
+      settingsModal.addEventListener("click", (e) => {
+        if (e.target === settingsModal) settingsModal.classList.add("hidden");
+      });
       googleLoginBtn.addEventListener("click", async () => {
         loginStatusEl.textContent = "";
         try {
           await signInWithPopup(auth, googleProvider);
         } catch (error) {
-          loginStatusEl.textContent = "Google sign-in failed. Try again.";
+          loginStatusEl.textContent = "Falha no login com Google. Tente novamente.";
         }
       });
       signOutBtn.addEventListener("click", async () => {
@@ -1028,6 +1179,7 @@
           calendarView.classList.add("hidden");
           loginView.classList.remove("hidden");
           loginStatusEl.textContent = "";
+          currentWard = "";
           return;
         }
 
@@ -1038,6 +1190,7 @@
           setDefaultMonth();
           isCalendarInitialized = true;
         }
+        loadSettings();
         fetchCalendar();
       });
     </script>
