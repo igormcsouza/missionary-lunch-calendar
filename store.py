@@ -8,6 +8,9 @@ class JsonFileStore:
     """File-based JSON store for local/development use."""
     def __init__(self, data_file):
         self.path = Path.cwd() / data_file
+        base, _, ext = data_file.rpartition(".")
+        settings_file = f"{base}_settings.{ext}" if base else f"{data_file}_settings"
+        self.settings_path = Path.cwd() / settings_file
 
     def _read_raw(self):
         if not self.path.exists():
@@ -60,6 +63,31 @@ class JsonFileStore:
 
         users_map[user_id] = self._sanitize_entries(entries)
         self.path.write_text(json.dumps(users_map, indent=2), encoding="utf-8")
+
+    def load_settings(self, user_id):
+        """Load and return the settings dict for the given user ID."""
+        if not self.settings_path.exists():
+            return {}
+        try:
+            raw = json.loads(self.settings_path.read_text(encoding="utf-8"))
+        except json.JSONDecodeError:
+            return {}
+        if not isinstance(raw, dict):
+            return {}
+        return self._sanitize_entries(raw.get(user_id, {}))
+
+    def save_settings(self, user_id, settings):
+        """Persist the settings dict for the given user ID."""
+        existing = {}
+        if self.settings_path.exists():
+            try:
+                raw = json.loads(self.settings_path.read_text(encoding="utf-8"))
+                if isinstance(raw, dict):
+                    existing = raw
+            except json.JSONDecodeError:
+                pass
+        existing[user_id] = self._sanitize_entries(settings)
+        self.settings_path.write_text(json.dumps(existing, indent=2), encoding="utf-8")
 
 
 class FirestoreStore:
@@ -128,6 +156,19 @@ class FirestoreStore:
         """Persist the calendar entries dict for the given user ID."""
         clean_entries = self._sanitize_entries(entries)
         self._doc_ref(user_id).set({"entries": clean_entries}, merge=True)
+
+    def load_settings(self, user_id):
+        """Load and return the settings dict for the given user ID."""
+        snapshot = self._doc_ref(user_id).get()
+        if not snapshot.exists:
+            return {}
+        payload = snapshot.to_dict() or {}
+        settings = payload.get("settings", {})
+        return self._sanitize_entries(settings)
+
+    def save_settings(self, user_id, settings):
+        """Persist the settings dict for the given user ID."""
+        self._doc_ref(user_id).set({"settings": self._sanitize_entries(settings)}, merge=True)
 
 
 def create_store(dev=False, data_file="calendar_data.json"):
