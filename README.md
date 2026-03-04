@@ -21,3 +21,7 @@ Make sure to use `--dev` to let the application know that no firestore connectio
 The application will start and restart every time there is a change to the `.py` file. If there are changes to the `.html` file it the UI will catch it.
 
 There is also a Dockerfile so that people can use all the features from firebase.
+
+## Getting Started with Firebase & Firestore
+
+For a step-by-step guide on setting up Firebase Authentication and Firestore (including service accounts, environment variables, Docker, and Fly.io deployment), see [HOWTO.md](HOWTO.md).
