@@ -458,19 +458,48 @@
         display: inline-flex;
         gap: 8px;
       }
+
+      @keyframes spin {
+        to { transform: rotate(360deg); }
+      }
+
+      .spinner {
+        display: inline-block;
+        width: 12px;
+        height: 12px;
+        border: 2px solid currentColor;
+        border-top-color: transparent;
+        border-radius: 50%;
+        animation: spin 0.6s linear infinite;
+        flex-shrink: 0;
+      }
+
+      .status-info {
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+      }
+
+      .auth-btn:disabled,
+      .icon-btn:disabled {
+        opacity: 0.55;
+        cursor: not-allowed;
+        pointer-events: none;
+      }
     </style>
   </head>
   <body>
     <div class="page">
       <section id="loginView" class="auth-wrap">
-        <button id="googleLoginBtn" class="auth-btn" type="button">
-          <svg width="18" height="18" viewBox="0 0 48 48" xmlns="http://www.w3.org/2000/svg">
+        <button id="googleLoginBtn" class="auth-btn" type="button" disabled>
+          <span id="loginSpinner" class="spinner"></span>
+          <svg id="googleIcon" width="18" height="18" viewBox="0 0 48 48" xmlns="http://www.w3.org/2000/svg" style="display:none">
             <path fill="#EA4335" d="M24 9.5c3.54 0 6.71 1.22 9.21 3.6l6.85-6.85C35.9 2.38 30.47 0 24 0 14.62 0 6.51 5.38 2.56 13.22l7.98 6.19C12.43 13.72 17.74 9.5 24 9.5z"/>
             <path fill="#4285F4" d="M46.98 24.55c0-1.57-.15-3.09-.38-4.55H24v9.02h12.94c-.58 2.96-2.26 5.48-4.78 7.18l7.73 6c4.51-4.18 7.09-10.36 7.09-17.65z"/>
             <path fill="#FBBC05" d="M10.53 28.59c-.48-1.45-.76-2.99-.76-4.59s.27-3.14.76-4.59l-7.98-6.19C.92 16.46 0 20.12 0 24c0 3.88.92 7.54 2.56 10.78l7.97-6.19z"/>
             <path fill="#34A853" d="M24 48c6.48 0 11.93-2.13 15.89-5.81l-7.73-6c-2.18 1.48-4.97 2.31-8.16 2.31-6.26 0-11.57-4.22-13.47-9.91l-7.98 6.19C6.51 42.62 14.62 48 24 48z"/>
           </svg>
-          Entrar com Google
+          <span id="loginBtnText">Verificando...</span>
         </button>
         <div id="loginStatus" class="auth-status"></div>
       </section>
@@ -506,7 +535,10 @@
         </table>
 
         <div id="status" class="status">
-          <span id="statusText"></span>
+          <span class="status-info">
+            <span id="statusSpinner" class="spinner hidden"></span>
+            <span id="statusText"></span>
+          </span>
           <div class="status-actions">
             <button id="settingsBtn" class="icon-btn" type="button" title="Configurações" aria-label="Configurações">
               <svg viewBox="0 0 24 24" fill="none" stroke-width="1.8" xmlns="http://www.w3.org/2000/svg">
@@ -581,6 +613,10 @@
       const wardInput = document.getElementById("wardInput");
       const saveSettingsBtn = document.getElementById("saveSettingsBtn");
       const cancelSettingsBtn = document.getElementById("cancelSettingsBtn");
+      const statusSpinner = document.getElementById("statusSpinner");
+      const loginSpinner = document.getElementById("loginSpinner");
+      const googleIcon = document.getElementById("googleIcon");
+      const loginBtnText = document.getElementById("loginBtnText");
       const pdayOverrides = {};
       const mutedDaysByWeek = {};
       let isCalendarInitialized = false;
@@ -597,6 +633,15 @@
       function showStatus(message, isError = false) {
         statusTextEl.textContent = message;
         statusEl.style.color = isError ? "#b42c2c" : "#6b7a90";
+      }
+
+      function setStatusLoading(message) {
+        statusSpinner.classList.remove("hidden");
+        showStatus(message);
+      }
+
+      function clearStatusLoading() {
+        statusSpinner.classList.add("hidden");
       }
 
       function setDefaultMonth() {
@@ -627,6 +672,7 @@
           return;
         }
 
+        setStatusLoading("Salvando...");
         try {
           const response = await fetch("/api/calendar", {
             method: "POST",
@@ -651,6 +697,8 @@
           showStatus(`Salvo: ${EXPORT_DAYS_PT[DAYS.indexOf(dayOfWeek)] ?? dayOfWeek}, ocorrência ${occurrence}, slot ${slot} – "${nameValue || ""}"`);
         } catch (error) {
           showStatus("Erro de rede ao salvar", true);
+        } finally {
+          clearStatusLoading();
         }
       }
 
@@ -879,6 +927,8 @@
         const year = Number(yearStr);
         const month = Number(monthStr);
 
+        monthPicker.disabled = true;
+        setStatusLoading("Carregando...");
         try {
           const response = await fetch(`/api/calendar?year=${year}&month=${month}`, {
             headers: { "X-User-Id": userId },
@@ -896,6 +946,9 @@
           showStatus(`Exibindo ${String(month).padStart(2, "0")}/${year}`);
         } catch (error) {
           showStatus("Erro de rede ao carregar calendário", true);
+        } finally {
+          monthPicker.disabled = false;
+          clearStatusLoading();
         }
       }
 
@@ -1117,6 +1170,7 @@
       async function loadSettings() {
         const userId = getAuthenticatedUserId();
         if (!userId) return;
+        setStatusLoading("Carregando...");
         try {
           const resp = await fetch("/api/settings", { headers: { "X-User-Id": userId } });
           if (resp.ok) {
@@ -1126,6 +1180,8 @@
           }
         } catch (err) {
           console.warn("Falha ao carregar configurações:", err);
+        } finally {
+          clearStatusLoading();
         }
       }
 
@@ -1133,6 +1189,7 @@
         const userId = getAuthenticatedUserId();
         if (!userId) return;
         const ward = wardInput.value.trim();
+        saveSettingsBtn.disabled = true;
         try {
           const resp = await fetch("/api/settings", {
             method: "POST",
@@ -1148,6 +1205,8 @@
           }
         } catch (_) {
           showStatus("Erro ao salvar configurações", true);
+        } finally {
+          saveSettingsBtn.disabled = false;
         }
       }
 
@@ -1179,6 +1238,10 @@
           calendarView.classList.add("hidden");
           loginView.classList.remove("hidden");
           loginStatusEl.textContent = "";
+          loginSpinner.classList.add("hidden");
+          googleIcon.style.display = "";
+          loginBtnText.textContent = "Entrar com Google";
+          googleLoginBtn.disabled = false;
           currentWard = "";
           return;
         }
