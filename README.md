@@ -1,6 +1,7 @@
 # Missionary Lunch Calendar
 
 [![Pylint](https://github.com/igormcsouza/missionary-lunch-calendar/actions/workflows/pylint.yml/badge.svg)](https://github.com/igormcsouza/missionary-lunch-calendar/actions/workflows/pylint.yml)
+[![CodeQL](https://github.com/igormcsouza/missionary-lunch-calendar/actions/workflows/github-code-scanning/codeql/badge.svg)](https://github.com/igormcsouza/missionary-lunch-calendar/actions/workflows/github-code-scanning/codeql)
 
 This application aims to solve an issue of creating a calendar to the members of the Church of Jesus Christ of Latter Days Saints to give launch to the missionaries. It stores the proposed days the members are available and easily update for next month keeping the days.
 
