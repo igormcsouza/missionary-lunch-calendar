@@ -21,6 +21,7 @@ jobs:
           token: ${{ secrets.GITHUB_TOKEN }}
           environment: production
           environment-url: https://missionary-lunch-calendar.fly.dev
+          log-url: https://missionary-lunch-calendar.fly.dev
       - uses: superfly/flyctl-actions/setup-flyctl@v1
       - run: flyctl deploy --remote-only
         env:
