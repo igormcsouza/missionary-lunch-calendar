@@ -454,6 +454,60 @@
         gap: 8px;
       }
 
+      .modal-section-label {
+        font-size: 0.78rem;
+        color: var(--subtle);
+        text-transform: uppercase;
+        letter-spacing: 0.06em;
+        margin: 16px 0 8px;
+      }
+
+      .modal-section-label:first-of-type {
+        margin-top: 0;
+      }
+
+      .slot-switcher {
+        display: inline-flex;
+        align-items: center;
+        gap: 4px;
+      }
+
+      .slot-switcher-label {
+        font-size: 0.8rem;
+        color: var(--subtle);
+        margin-right: 2px;
+      }
+
+      .slot-btn {
+        border: 1px solid var(--line);
+        border-radius: 6px;
+        width: 30px;
+        height: 30px;
+        background: #192636;
+        color: var(--ink);
+        font-size: 0.9rem;
+        font-weight: 600;
+        cursor: pointer;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+      }
+
+      .slot-btn:hover {
+        border-color: #607792;
+        background: #213248;
+      }
+
+      .slot-btn.active {
+        border-color: var(--accent);
+        background: rgba(59, 200, 180, 0.15);
+        color: var(--accent);
+      }
+
+      .modal-slot-switcher {
+        margin-bottom: 12px;
+      }
+
       .status-actions {
         display: inline-flex;
         gap: 8px;
@@ -507,10 +561,15 @@
       <main id="calendarView" class="calendar-wrap hidden">
         <div class="topbar">
           <div>
-            <h1 class="title">Calendário de Almoço Missionário</h1>
-            <p class="subtitle">Adicione o nome das famílias nos dias da semana em que elas oferecem almoço aos Missionários</p>
+            <h1 class="title" id="calendarTitle">Calendário de Almoço Missionário</h1>
+            <p class="subtitle" id="calendarSubtitle">Adicione o nome das famílias nos dias da semana em que elas oferecem almoço aos Missionários</p>
           </div>
           <div class="selector">
+            <div id="topbarSlotSwitcher" class="slot-switcher">
+              <span class="slot-switcher-label">Slot</span>
+              <button type="button" class="slot-btn active" data-profile="1">1</button>
+              <button type="button" class="slot-btn" data-profile="2">2</button>
+            </div>
             <div class="selector-controls">
               <div class="month-picker-wrap">
                 <label for="monthPicker">Mês / Ano</label>
@@ -561,9 +620,23 @@
     <div id="settingsModal" class="modal-overlay hidden">
       <div class="modal-box">
         <h3>Configurações</h3>
+        <div class="modal-section-label">Geral</div>
         <div class="modal-field">
           <label for="wardInput">Ala</label>
           <input id="wardInput" type="text" placeholder="Ex: Eusébio" />
+        </div>
+        <div class="modal-section-label">Por Slot</div>
+        <div class="slot-switcher modal-slot-switcher">
+          <button type="button" class="slot-btn active" data-settings-profile="1">1</button>
+          <button type="button" class="slot-btn" data-settings-profile="2">2</button>
+        </div>
+        <div class="modal-field">
+          <label for="slotTitleInput">Título</label>
+          <input id="slotTitleInput" type="text" placeholder="Título do calendário" />
+        </div>
+        <div class="modal-field">
+          <label for="slotSubtitleInput">Subtítulo</label>
+          <input id="slotSubtitleInput" type="text" placeholder="Descrição do calendário" />
         </div>
         <div class="modal-actions">
           <button id="cancelSettingsBtn" class="auth-btn" type="button">Cancelar</button>
@@ -621,6 +694,53 @@
       const mutedDaysByWeek = {};
       let isCalendarInitialized = false;
       let currentWard = "";
+      let currentProfile = 1;
+      let settingsEditProfile = 1;
+      let allSettings = {};
+
+      const calendarTitleEl = document.getElementById("calendarTitle");
+      const calendarSubtitleEl = document.getElementById("calendarSubtitle");
+      const slotTitleInput = document.getElementById("slotTitleInput");
+      const slotSubtitleInput = document.getElementById("slotSubtitleInput");
+
+      const DEFAULT_TITLES = [
+        "Calendário de Almoço Missionário",
+        "Calendário de Ajuda Missionária",
+      ];
+      const DEFAULT_SUBTITLES = [
+        "Adicione o nome das famílias nos dias da semana em que elas oferecem almoço aos Missionários",
+        "Gerencie a agenda de ajuda aos Missionários",
+      ];
+
+      function getProfileTitle(profile) {
+        return allSettings[`slot_${profile}_title`] || DEFAULT_TITLES[profile - 1] || `Slot ${profile}`;
+      }
+
+      function getProfileSubtitle(profile) {
+        return allSettings[`slot_${profile}_subtitle`] || DEFAULT_SUBTITLES[profile - 1] || "";
+      }
+
+      function updateHeaderText() {
+        calendarTitleEl.textContent = getProfileTitle(currentProfile);
+        calendarSubtitleEl.textContent = getProfileSubtitle(currentProfile);
+      }
+
+      function updateTopbarSlotButtons() {
+        document.querySelectorAll("#topbarSlotSwitcher .slot-btn").forEach((btn) => {
+          btn.classList.toggle("active", Number(btn.dataset.profile) === currentProfile);
+        });
+      }
+
+      function updateSettingsSlotButtons() {
+        document.querySelectorAll(".modal-slot-switcher .slot-btn").forEach((btn) => {
+          btn.classList.toggle("active", Number(btn.dataset.settingsProfile) === settingsEditProfile);
+        });
+      }
+
+      function populateSettingsSlotFields() {
+        slotTitleInput.value = allSettings[`slot_${settingsEditProfile}_title`] || "";
+        slotSubtitleInput.value = allSettings[`slot_${settingsEditProfile}_subtitle`] || "";
+      }
 
       function getAuthenticatedUserId() {
         const currentUser = auth.currentUser;
@@ -685,6 +805,7 @@
               day_of_week: dayOfWeek,
               slot: slot,
               name: nameValue,
+              profile: currentProfile,
             }),
           });
 
@@ -930,7 +1051,7 @@
         monthPicker.disabled = true;
         setStatusLoading("Carregando...");
         try {
-          const response = await fetch(`/api/calendar?year=${year}&month=${month}`, {
+          const response = await fetch(`/api/calendar?year=${year}&month=${month}&profile=${currentProfile}`, {
             headers: { "X-User-Id": userId },
           });
           const data = await response.json();
@@ -1046,7 +1167,8 @@
         const weekCount = exportWeeks.length || 1;
         const selected = monthPicker.value || "calendar";
         const [y, m] = selected.split("-");
-        const title = y && m ? `${m}/${y}` : "Almoço Missionário";
+        const profileTitle = getProfileTitle(currentProfile);
+        const title = y && m ? `${m}/${y}` : profileTitle;
         const dateStamp = new Date().toISOString().slice(0, 10);
 
         const dayColW = 152;
@@ -1068,7 +1190,7 @@
 
         ctx.fillStyle = "#1a2433";
         ctx.font = "bold 18px Segoe UI, Tahoma, sans-serif";
-        ctx.fillText(`Almoço Missionário ${title}`, pad, pad + 4);
+        ctx.fillText(`${profileTitle} ${title}`, pad, pad + 4);
 
         const gridX = pad;
         const gridY = pad + 16;
@@ -1175,8 +1297,10 @@
           const resp = await fetch("/api/settings", { headers: { "X-User-Id": userId } });
           if (resp.ok) {
             const data = await resp.json();
-            currentWard = data.settings?.ward || "";
+            allSettings = data.settings || {};
+            currentWard = allSettings.ward || "";
             wardInput.value = currentWard;
+            updateHeaderText();
           }
         } catch (err) {
           console.warn("Falha ao carregar configurações:", err);
@@ -1191,14 +1315,22 @@
         const ward = wardInput.value.trim();
         saveSettingsBtn.disabled = true;
         try {
+          const body = {
+            ward,
+            [`slot_${settingsEditProfile}_title`]: slotTitleInput.value.trim(),
+            [`slot_${settingsEditProfile}_subtitle`]: slotSubtitleInput.value.trim(),
+          };
           const resp = await fetch("/api/settings", {
             method: "POST",
             headers: { "Content-Type": "application/json", "X-User-Id": userId },
-            body: JSON.stringify({ ward }),
+            body: JSON.stringify(body),
           });
           if (resp.ok) {
-            currentWard = ward;
+            const data = await resp.json();
+            allSettings = data.settings || {};
+            currentWard = allSettings.ward || "";
             settingsModal.classList.add("hidden");
+            updateHeaderText();
             showStatus("Configurações salvas");
           } else {
             showStatus("Erro ao salvar configurações", true);
@@ -1214,12 +1346,36 @@
       downloadBtn.addEventListener("click", downloadCalendarImage);
       settingsBtn.addEventListener("click", () => {
         wardInput.value = currentWard;
+        settingsEditProfile = currentProfile;
+        updateSettingsSlotButtons();
+        populateSettingsSlotFields();
         settingsModal.classList.remove("hidden");
       });
       saveSettingsBtn.addEventListener("click", persistSettings);
       cancelSettingsBtn.addEventListener("click", () => settingsModal.classList.add("hidden"));
       settingsModal.addEventListener("click", (e) => {
         if (e.target === settingsModal) settingsModal.classList.add("hidden");
+      });
+
+      document.querySelectorAll("#topbarSlotSwitcher .slot-btn").forEach((btn) => {
+        btn.addEventListener("click", () => {
+          const profile = Number(btn.dataset.profile);
+          if (profile === currentProfile) return;
+          currentProfile = profile;
+          updateTopbarSlotButtons();
+          updateHeaderText();
+          Object.keys(pdayOverrides).forEach((k) => delete pdayOverrides[k]);
+          Object.keys(mutedDaysByWeek).forEach((k) => delete mutedDaysByWeek[k]);
+          fetchCalendar();
+        });
+      });
+
+      document.querySelectorAll(".modal-slot-switcher .slot-btn").forEach((btn) => {
+        btn.addEventListener("click", () => {
+          settingsEditProfile = Number(btn.dataset.settingsProfile);
+          updateSettingsSlotButtons();
+          populateSettingsSlotFields();
+        });
       });
       googleLoginBtn.addEventListener("click", async () => {
         loginStatusEl.textContent = "";

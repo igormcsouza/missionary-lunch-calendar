@@ -43,25 +43,39 @@ class JsonFileStore:
             users_map[user_id] = self._sanitize_entries(entries)
         return users_map
 
-    def load_entries(self, user_id):
-        """Load and return the calendar entries dict for the given user ID."""
+    def load_entries(self, user_id, profile=1):
+        """Load and return the calendar entries dict for the given user ID and profile."""
         raw = self._read_raw()
         if not raw:
             return {}
         if self._is_legacy_entries_shape(raw):
-            return self._sanitize_entries(raw)
+            return self._sanitize_entries(raw) if profile == 1 else {}
 
         users_map = self._sanitize_users_map(raw)
-        return users_map.get(user_id, {})
+        all_entries = users_map.get(user_id, {})
+        if profile == 1:
+            # Profile-1 entry keys always start with an occurrence digit (1–5).
+            return {k: v for k, v in all_entries.items() if k[:1].isdigit()}
+        prefix = f"p{profile}:"
+        return {k[len(prefix):]: v for k, v in all_entries.items() if k.startswith(prefix)}
 
-    def save_entries(self, user_id, entries):
-        """Persist the calendar entries dict for the given user ID."""
+    def save_entries(self, user_id, entries, profile=1):
+        """Persist the calendar entries dict for the given user ID and profile."""
         raw = self._read_raw()
         users_map = {}
         if raw and not self._is_legacy_entries_shape(raw):
             users_map = self._sanitize_users_map(raw)
 
-        users_map[user_id] = self._sanitize_entries(entries)
+        all_entries = users_map.get(user_id, {})
+        clean = self._sanitize_entries(entries)
+        if profile == 1:
+            # Keep profile 2+ entries (keys that do not start with a digit), replace profile-1.
+            other = {k: v for k, v in all_entries.items() if not k[:1].isdigit()}
+            users_map[user_id] = {**other, **clean}
+        else:
+            prefix = f"p{profile}:"
+            other = {k: v for k, v in all_entries.items() if not k.startswith(prefix)}
+            users_map[user_id] = {**other, **{f"{prefix}{k}": v for k, v in clean.items()}}
         self.path.write_text(json.dumps(users_map, indent=2), encoding="utf-8")
 
     def load_settings(self, user_id):
@@ -143,19 +157,23 @@ class FirestoreStore:
     def _doc_ref(self, user_id):
         return self._client.collection(self._collection_name).document(user_id)
 
-    def load_entries(self, user_id):
-        """Load and return the calendar entries dict for the given user ID."""
+    def _entries_field(self, profile):
+        """Return the Firestore document field name for the given profile."""
+        return "entries" if profile == 1 else f"entries_{profile}"
+
+    def load_entries(self, user_id, profile=1):
+        """Load and return the calendar entries dict for the given user ID and profile."""
         snapshot = self._doc_ref(user_id).get()
         if not snapshot.exists:
             return {}
         payload = snapshot.to_dict() or {}
-        entries = payload.get("entries", {})
+        entries = payload.get(self._entries_field(profile), {})
         return self._sanitize_entries(entries)
 
-    def save_entries(self, user_id, entries):
-        """Persist the calendar entries dict for the given user ID."""
+    def save_entries(self, user_id, entries, profile=1):
+        """Persist the calendar entries dict for the given user ID and profile."""
         clean_entries = self._sanitize_entries(entries)
-        self._doc_ref(user_id).set({"entries": clean_entries}, merge=True)
+        self._doc_ref(user_id).set({self._entries_field(profile): clean_entries}, merge=True)
 
     def load_settings(self, user_id):
         """Load and return the settings dict for the given user ID."""

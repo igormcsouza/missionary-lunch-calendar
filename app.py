@@ -18,14 +18,15 @@ DAYS = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sun
 MAX_DISPLAY_WEEKS = 6
 MAX_OCCURRENCES = 5
 MAX_SLOTS = 2
+MAX_APP_PROFILES = 2
 LOGGER = logging.getLogger("calendar_api")
 STORE = create_store(dev=True, data_file=DATA_FILE)
 LOGGED_USER_IDS = set()
 
 
-def load_entries(user_id):
-    """Load calendar entries for the given user ID."""
-    return STORE.load_entries(user_id)
+def load_entries(user_id, profile=1):
+    """Load calendar entries for the given user ID and profile."""
+    return STORE.load_entries(user_id, profile)
 
 
 def load_settings(user_id):
@@ -54,9 +55,9 @@ def get_cell_names(entries, occurrence, day_of_week):
     return {"first": first, "second": second}
 
 
-def save_entries(user_id, entries):
-    """Persist calendar entries for the given user ID."""
-    STORE.save_entries(user_id, entries)
+def save_entries(user_id, entries, profile=1):
+    """Persist calendar entries for the given user ID and profile."""
+    STORE.save_entries(user_id, entries, profile)
 
 
 def build_day_lookup(year, month):
@@ -178,6 +179,10 @@ class CalendarHandler(BaseHTTPRequestHandler):
             self.send_json(404, {"status": "error", "error": "Not found"})
             return
 
+        self._handle_get_calendar(parsed)
+
+    def _handle_get_calendar(self, parsed):
+        """Handle GET /api/calendar."""
         user_id = self.get_user_id()
         if not user_id:
             self.send_json(401, {"status": "error", "error": "User not authenticated"})
@@ -187,6 +192,7 @@ class CalendarHandler(BaseHTTPRequestHandler):
         try:
             year = int(query.get("year", [str(date.today().year)])[0])
             month = int(query.get("month", [str(date.today().month)])[0])
+            profile = int(query.get("profile", ["1"])[0])
         except ValueError:
             LOGGER.warning("GET /api/calendar invalid month/year query=%s", parsed.query)
             self.send_json(400, {"status": "error", "error": "Invalid month/year"})
@@ -197,8 +203,19 @@ class CalendarHandler(BaseHTTPRequestHandler):
             self.send_json(400, {"status": "error", "error": "Month must be between 1 and 12"})
             return
 
-        entries = load_entries(user_id)
-        LOGGER.info("GET /api/calendar user_id=%s year=%s month=%s", user_id, year, month)
+        if profile < 1 or profile > MAX_APP_PROFILES:
+            LOGGER.warning("GET /api/calendar invalid profile=%s", profile)
+            self.send_json(
+                400,
+                {"status": "error", "error": f"profile must be between 1 and {MAX_APP_PROFILES}"},
+            )
+            return
+
+        entries = load_entries(user_id, profile)
+        LOGGER.info(
+            "GET /api/calendar user_id=%s year=%s month=%s profile=%s",
+            user_id, year, month, profile,
+        )
         self.send_json(200, build_calendar_payload(year, month, entries))
 
     def _handle_get_settings(self):
@@ -230,6 +247,16 @@ class CalendarHandler(BaseHTTPRequestHandler):
             settings["ward"] = ward
         else:
             settings.pop("ward", None)
+        # Per-profile title and subtitle (only update if key is present in request).
+        for app_profile in range(1, MAX_APP_PROFILES + 1):
+            for field in ("title", "subtitle"):
+                key = f"slot_{app_profile}_{field}"
+                if key in data:
+                    value = str(data[key]).strip()
+                    if value:
+                        settings[key] = value
+                    else:
+                        settings.pop(key, None)
         save_settings(user_id, settings)
         LOGGER.info("POST /api/settings user_id=%s ward=%r", user_id, ward)
         self.send_json(200, {"status": "ok", "settings": settings})
@@ -263,6 +290,7 @@ class CalendarHandler(BaseHTTPRequestHandler):
         occurrence = data.get("occurrence")
         slot = data.get("slot", 1)
         name = str(data.get("name", "")).strip()
+        profile = data.get("profile", 1)
 
         if day_of_week not in DAYS:
             LOGGER.warning("POST /api/calendar invalid day_of_week=%s", day_of_week)
@@ -293,7 +321,15 @@ class CalendarHandler(BaseHTTPRequestHandler):
             self.send_json(400, {"status": "error", "error": "slot must be between 1 and 2"})
             return
 
-        entries = load_entries(user_id)
+        if not isinstance(profile, int) or profile < 1 or profile > MAX_APP_PROFILES:
+            LOGGER.warning("POST /api/calendar invalid profile=%s", profile)
+            self.send_json(
+                400,
+                {"status": "error", "error": f"profile must be between 1 and {MAX_APP_PROFILES}"},
+            )
+            return
+
+        entries = load_entries(user_id, profile)
         base_key = f"{occurrence}:{day_of_week}"
         key = f"{base_key}:{slot}"
         if name:
@@ -302,14 +338,16 @@ class CalendarHandler(BaseHTTPRequestHandler):
             entries.pop(key, None)
         # Migrate legacy key once any slot is edited.
         entries.pop(base_key, None)
-        save_entries(user_id, entries)
+        save_entries(user_id, entries, profile)
         LOGGER.info(
-            "POST /api/calendar user_id=%s saved occurrence=%s day_of_week=%s slot=%s has_name=%s",
+            "POST /api/calendar user_id=%s saved occurrence=%s day_of_week=%s slot=%s"
+            " has_name=%s profile=%s",
             user_id,
             occurrence,
             day_of_week,
             slot,
             bool(name),
+            profile,
         )
 
         self.send_json(
@@ -321,6 +359,7 @@ class CalendarHandler(BaseHTTPRequestHandler):
                     "day_of_week": day_of_week,
                     "slot": slot,
                     "name": name,
+                    "profile": profile,
                 },
             },
         )
