@@ -466,6 +466,13 @@
         margin-top: 0;
       }
 
+      .modal-divider {
+        border: none;
+        border-top: 1px solid var(--line);
+        margin: 16px 0 0;
+        opacity: 0.5;
+      }
+
       .slot-switcher {
         display: inline-flex;
         align-items: center;
@@ -625,6 +632,7 @@
           <label for="wardInput">Ala</label>
           <input id="wardInput" type="text" placeholder="Ex: Eusébio" />
         </div>
+        <hr class="modal-divider" />
         <div class="modal-section-label">Por Slot</div>
         <div class="slot-switcher modal-slot-switcher">
           <button type="button" class="slot-btn active" data-settings-profile="1">1</button>
