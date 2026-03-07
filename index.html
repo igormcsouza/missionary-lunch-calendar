@@ -573,7 +573,7 @@
           </div>
           <div class="selector">
             <div id="topbarSlotSwitcher" class="slot-switcher">
-              <span class="slot-switcher-label">Slot</span>
+              <span class="slot-switcher-label">Perfil</span>
               <button type="button" class="slot-btn active" data-profile="1">1</button>
               <button type="button" class="slot-btn" data-profile="2">2</button>
             </div>
@@ -633,7 +633,7 @@
           <input id="wardInput" type="text" placeholder="Ex: Eusébio" />
         </div>
         <hr class="modal-divider" />
-        <div class="modal-section-label">Por Slot</div>
+        <div class="modal-section-label">Por Perfil</div>
         <div class="slot-switcher modal-slot-switcher">
           <button type="button" class="slot-btn active" data-settings-profile="1">1</button>
           <button type="button" class="slot-btn" data-settings-profile="2">2</button>
@@ -721,7 +721,7 @@
       ];
 
       function getProfileTitle(profile) {
-        return allSettings[`slot_${profile}_title`] || DEFAULT_TITLES[profile - 1] || `Slot ${profile}`;
+        return allSettings[`slot_${profile}_title`] || DEFAULT_TITLES[profile - 1] || `Perfil ${profile}`;
       }
 
       function getProfileSubtitle(profile) {
