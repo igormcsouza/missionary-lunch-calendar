@@ -195,7 +195,8 @@ class FirestoreStore:
         """Persist the settings dict for the given user ID."""
         # Use merge=["settings"] (field-path list) to fully replace the settings
         # field rather than deep-merging into it (see save_entries for details).
-        self._doc_ref(user_id).set({"settings": self._sanitize_entries(settings)}, merge=["settings"])
+        clean = self._sanitize_entries(settings)
+        self._doc_ref(user_id).set({"settings": clean}, merge=["settings"])
 
 
 def create_store(dev=False, data_file="calendar_data.json"):

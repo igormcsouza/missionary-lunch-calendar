@@ -1,14 +1,12 @@
 """Tests for the storage backends."""
-import json
 import os
 import sys
 import tempfile
 import unittest
-from pathlib import Path
-from unittest.mock import MagicMock, call, patch
+from unittest.mock import MagicMock, patch
 
 sys.path.insert(0, os.path.dirname(__file__))
-from store import JsonFileStore, FirestoreStore  # noqa: E402
+from store import JsonFileStore, FirestoreStore  # noqa: E402  # pylint: disable=wrong-import-position
 
 
 class TestJsonFileStoreClearEntry(unittest.TestCase):
@@ -96,13 +94,13 @@ class TestFirestoreStoreClearEntry(unittest.TestCase):
                 },
             ):
                 store = FirestoreStore.__new__(FirestoreStore)
-                store._firestore = firestore_mod
-                store._service_account = sa_mod
-                store._collection_name = "calendar_entries"
-                store._client = mock_client
+                store._firestore = firestore_mod  # pylint: disable=protected-access
+                store._service_account = sa_mod  # pylint: disable=protected-access
+                store._collection_name = "calendar_entries"  # pylint: disable=protected-access
+                store._client = mock_client  # pylint: disable=protected-access
         return store, mock_client
 
-    def _doc_ref(self, mock_client, user_id="user1"):
+    def _doc_ref(self, mock_client):
         return mock_client.collection.return_value.document.return_value
 
     def test_save_entries_uses_field_path_merge_not_bool_merge(self):
