@@ -1,6 +1,7 @@
 # Missionary Lunch Calendar
 
 [![Pylint](https://github.com/igormcsouza/missionary-lunch-calendar/actions/workflows/pylint.yml/badge.svg)](https://github.com/igormcsouza/missionary-lunch-calendar/actions/workflows/pylint.yml)
+[![Tests](https://github.com/igormcsouza/missionary-lunch-calendar/actions/workflows/tests.yml/badge.svg)](https://github.com/igormcsouza/missionary-lunch-calendar/actions/workflows/tests.yml)
 [![CodeQL](https://github.com/igormcsouza/missionary-lunch-calendar/actions/workflows/github-code-scanning/codeql/badge.svg)](https://github.com/igormcsouza/missionary-lunch-calendar/actions/workflows/github-code-scanning/codeql)
 
 This application aims to solve an issue of creating a calendar to the members of the Church of Jesus Christ of Latter Days Saints to give launch to the missionaries. It stores the proposed days the members are available and easily update for next month keeping the days.
@@ -21,7 +22,13 @@ Make sure to use `--dev` to let the application know that no firestore connectio
 
 The application will start and restart every time there is a change to the `.py` file. If there are changes to the `.html` file it the UI will catch it.
 
-There is also a Dockerfile so that people can use all the features from firebase.
+There is also a Dockerfile and a `docker-compose.yml` for a one-command local startup:
+
+```bash
+docker compose up --build
+```
+
+The app will be available at `http://localhost:5001` in dev mode (no Firestore required).
 
 ## Getting Started with Firebase & Firestore
 
