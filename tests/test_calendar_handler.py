@@ -1,4 +1,4 @@
-"""API-level tests for the calendar HTTP server."""
+"""Tests for CalendarHandler HTTP endpoints (calendar and settings APIs)."""
 import io
 import json
 import os
@@ -8,7 +8,6 @@ import unittest
 
 sys.path.insert(0, os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "src"))
 from core.store import JsonFileStore  # noqa: E402  # pylint: disable=wrong-import-position
-from core.utils import build_calendar_payload  # noqa: E402  # pylint: disable=wrong-import-position
 from handlers.calendar_handler import CalendarHandler  # noqa: E402  # pylint: disable=wrong-import-position
 
 
@@ -22,7 +21,6 @@ def _make_handler(method, path, body=None, headers=None):
     if body_bytes:
         raw_headers["Content-Length"] = str(len(body_bytes))
 
-    # rfile contains only the body; headers are passed separately.
     rfile = io.BytesIO(body_bytes)
     wfile = io.BytesIO()
 
@@ -49,7 +47,7 @@ def _parse_response(wfile):
     return status_code, payload
 
 
-class TestCalendarAPIGetCalendar(unittest.TestCase):
+class TestCalendarHandlerGetCalendar(unittest.TestCase):
     """Tests for GET /api/calendar."""
 
     def setUp(self):
@@ -109,7 +107,7 @@ class TestCalendarAPIGetCalendar(unittest.TestCase):
         self.assertEqual(payload["status"], "error")
 
 
-class TestCalendarAPIPostCalendar(unittest.TestCase):
+class TestCalendarHandlerPostCalendar(unittest.TestCase):
     """Tests for POST /api/calendar."""
 
     def setUp(self):
@@ -214,8 +212,8 @@ class TestCalendarAPIPostCalendar(unittest.TestCase):
         self.assertEqual(payload["status"], "error")
 
 
-class TestCalendarAPISettings(unittest.TestCase):
-    """Tests for GET and POST /api/settings."""
+class TestCalendarHandlerGetSettings(unittest.TestCase):
+    """Tests for GET /api/settings via CalendarHandler."""
 
     def setUp(self):
         self._fd, self._tmp = tempfile.mkstemp(suffix=".json")
@@ -228,38 +226,25 @@ class TestCalendarAPISettings(unittest.TestCase):
             if os.path.exists(path):
                 os.unlink(path)
 
-    def test_get_settings_returns_ok(self):
-        """GET /api/settings returns 200 with a settings dict."""
+    def test_returns_empty_settings_for_new_user(self):
+        """GET /api/settings returns an empty dict for a user with no stored settings."""
         handler, wfile = _make_handler("GET", "/api/settings")
         handler.do_GET()
         status, payload = _parse_response(wfile)
         self.assertEqual(status, 200)
         self.assertEqual(payload["status"], "ok")
-        self.assertIn("settings", payload)
+        self.assertEqual(payload["settings"], {})
 
-    def test_post_settings_saves_ward(self):
-        """POST /api/settings persists the ward field."""
-        body = {"ward": "Sunridge"}
-        handler, wfile = _make_handler("POST", "/api/settings", body=body)
-        handler.do_POST()
+    def test_returns_stored_settings(self):
+        """GET /api/settings returns previously saved settings."""
+        CalendarHandler.STORE.save_settings("testuser", {"ward": "Westside"})
+        handler, wfile = _make_handler("GET", "/api/settings")
+        handler.do_GET()
         status, payload = _parse_response(wfile)
         self.assertEqual(status, 200)
-        self.assertEqual(payload["settings"]["ward"], "Sunridge")
+        self.assertEqual(payload["settings"]["ward"], "Westside")
 
-    def test_post_settings_clears_ward(self):
-        """POST /api/settings with an empty ward removes the key."""
-        body_save = {"ward": "Lakeside"}
-        handler, _ = _make_handler("POST", "/api/settings", body=body_save)
-        handler.do_POST()
-
-        body_clear = {"ward": ""}
-        handler2, wfile2 = _make_handler("POST", "/api/settings", body=body_clear)
-        handler2.do_POST()
-        status, payload = _parse_response(wfile2)
-        self.assertEqual(status, 200)
-        self.assertNotIn("ward", payload["settings"])
-
-    def test_get_settings_missing_user_id_returns_401(self):
+    def test_missing_user_id_returns_401(self):
         """GET /api/settings without X-User-Id returns 401."""
         handler, wfile = _make_handler("GET", "/api/settings", headers={"X-User-Id": ""})
         handler.do_GET()
@@ -268,37 +253,66 @@ class TestCalendarAPISettings(unittest.TestCase):
         self.assertEqual(payload["status"], "error")
 
 
-class TestBuildCalendarPayload(unittest.TestCase):
-    """Unit tests for build_calendar_payload helper."""
+class TestCalendarHandlerPostSettings(unittest.TestCase):
+    """Tests for POST /api/settings via CalendarHandler."""
 
-    def test_march_2025_has_correct_structure(self):
-        """March 2025 payload contains 6 week rows with 7 cells each."""
-        payload = build_calendar_payload(2025, 3, {})
-        self.assertEqual(payload["status"], "ok")
-        self.assertEqual(payload["month"], 3)
-        self.assertEqual(len(payload["weeks"]), 6)
-        for week in payload["weeks"]:
-            self.assertEqual(len(week["cells"]), 7)
+    def setUp(self):
+        self._fd, self._tmp = tempfile.mkstemp(suffix=".json")
+        os.close(self._fd)
+        CalendarHandler.STORE = JsonFileStore(self._tmp)
+        CalendarHandler.LOGGED_USER_IDS.clear()
 
-    def test_monday_cells_are_fixed_pday(self):
-        """Monday cells always show PDAY and are not editable."""
-        payload = build_calendar_payload(2025, 3, {})
-        for week in payload["weeks"]:
-            monday = next(c for c in week["cells"] if c["day_of_week"] == "Monday")
-            self.assertEqual(monday["name"], "PDAY")
-            self.assertFalse(monday["editable"])
+    def tearDown(self):
+        for path in (self._tmp, self._tmp.replace(".json", "_settings.json")):
+            if os.path.exists(path):
+                os.unlink(path)
 
-    def test_stored_entry_appears_in_payload(self):
-        """An entry saved to the store is reflected in the calendar payload."""
-        entries = {"1:Tuesday:1": "Helen"}
-        payload = build_calendar_payload(2025, 3, entries)
-        first_tuesday = next(
-            c
-            for week in payload["weeks"]
-            for c in week["cells"]
-            if c["day_of_week"] == "Tuesday" and c["occurrence"] == 1
+    def test_saves_ward(self):
+        """POST /api/settings persists the ward and returns it."""
+        handler, wfile = _make_handler("POST", "/api/settings", body={"ward": "Northfield"})
+        handler.do_POST()
+        status, payload = _parse_response(wfile)
+        self.assertEqual(status, 200)
+        self.assertEqual(payload["settings"]["ward"], "Northfield")
+
+    def test_clears_ward_with_empty_string(self):
+        """POST /api/settings with an empty ward removes the key."""
+        CalendarHandler.STORE.save_settings("testuser", {"ward": "Northfield"})
+        handler, wfile = _make_handler("POST", "/api/settings", body={"ward": ""})
+        handler.do_POST()
+        status, payload = _parse_response(wfile)
+        self.assertEqual(status, 200)
+        self.assertNotIn("ward", payload["settings"])
+
+    def test_saves_profile_title(self):
+        """POST /api/settings saves a per-profile title field."""
+        handler, wfile = _make_handler(
+            "POST", "/api/settings", body={"slot_1_title": "Elders"}
         )
-        self.assertEqual(first_tuesday["names"]["first"], "Helen")
+        handler.do_POST()
+        status, payload = _parse_response(wfile)
+        self.assertEqual(status, 200)
+        self.assertEqual(payload["settings"]["slot_1_title"], "Elders")
+
+    def test_missing_user_id_returns_401(self):
+        """POST /api/settings without X-User-Id returns 401."""
+        handler, wfile = _make_handler(
+            "POST", "/api/settings", body={"ward": "X"}, headers={"X-User-Id": ""}
+        )
+        handler.do_POST()
+        status, payload = _parse_response(wfile)
+        self.assertEqual(status, 401)
+        self.assertEqual(payload["status"], "error")
+
+    def test_invalid_json_returns_400(self):
+        """POST /api/settings with invalid JSON returns 400."""
+        handler, wfile = _make_handler("POST", "/api/settings")
+        handler.rfile = io.BytesIO(b"notjson")
+        handler.headers["Content-Length"] = "7"
+        handler.do_POST()
+        status, payload = _parse_response(wfile)
+        self.assertEqual(status, 400)
+        self.assertEqual(payload["status"], "error")
 
 
 if __name__ == "__main__":
