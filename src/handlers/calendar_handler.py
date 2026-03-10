@@ -35,20 +35,24 @@ class CalendarHandler(BaseHTTPRequestHandler):
         self.end_headers()
         self.wfile.write(body)
 
-    def send_index(self):
-        """Serve the index.html file."""
-        index_path = Path(__file__).parent.parent / "views" / "index.html"
-        if not index_path.exists():
+    def send_static(self, filename, content_type):
+        """Serve a static file from the views directory."""
+        file_path = Path(__file__).parent.parent / "views" / filename
+        if not file_path.exists():
             self.send_response(404)
             self.send_header("Content-Type", "text/plain; charset=utf-8")
             self.end_headers()
-            self.wfile.write(b"index.html not found in current directory")
+            self.wfile.write(f"{filename} not found".encode("utf-8"))
             return
 
         self.send_response(200)
-        self.send_header("Content-Type", "text/html; charset=utf-8")
+        self.send_header("Content-Type", content_type)
         self.end_headers()
-        self.wfile.write(index_path.read_bytes())
+        self.wfile.write(file_path.read_bytes())
+
+    def send_index(self):
+        """Serve the index.html file."""
+        self.send_static("index.html", "text/html; charset=utf-8")
 
     def do_GET(self):  # pylint: disable=invalid-name
         """Handle GET requests for the calendar API."""
@@ -56,6 +60,14 @@ class CalendarHandler(BaseHTTPRequestHandler):
 
         if parsed.path == "/":
             self.send_index()
+            return
+
+        if parsed.path == "/styles.css":
+            self.send_static("styles.css", "text/css; charset=utf-8")
+            return
+
+        if parsed.path == "/script.js":
+            self.send_static("script.js", "application/javascript; charset=utf-8")
             return
 
         if parsed.path == "/api/settings":
