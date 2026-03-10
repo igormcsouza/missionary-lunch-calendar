@@ -6,7 +6,7 @@ import unittest
 from unittest.mock import MagicMock, patch
 
 sys.path.insert(0, os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "src"))
-from store import JsonFileStore, FirestoreStore  # noqa: E402  # pylint: disable=wrong-import-position
+from core.store import JsonFileStore, FirestoreStore  # noqa: E402  # pylint: disable=wrong-import-position
 
 
 class TestJsonFileStoreClearEntry(unittest.TestCase):
@@ -78,7 +78,7 @@ class TestFirestoreStoreClearEntry(unittest.TestCase):
 
     def _make_store(self):
         """Create a FirestoreStore with a fully-mocked Firestore client."""
-        with patch("store.FirestoreStore._build_client") as mock_build:
+        with patch("core.store.FirestoreStore._build_client") as mock_build:
             mock_client = MagicMock()
             mock_build.return_value = mock_client
             # Patch the imports inside __init__

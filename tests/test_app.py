@@ -7,8 +7,9 @@ import tempfile
 import unittest
 
 sys.path.insert(0, os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "src"))
-import app  # noqa: E402  # pylint: disable=wrong-import-position
-from store import JsonFileStore  # noqa: E402  # pylint: disable=wrong-import-position
+from core.store import JsonFileStore  # noqa: E402  # pylint: disable=wrong-import-position
+from core.utils import build_calendar_payload  # noqa: E402  # pylint: disable=wrong-import-position
+from handlers.calendar_handler import CalendarHandler  # noqa: E402  # pylint: disable=wrong-import-position
 
 
 def _make_handler(method, path, body=None, headers=None):
@@ -25,7 +26,7 @@ def _make_handler(method, path, body=None, headers=None):
     rfile = io.BytesIO(body_bytes)
     wfile = io.BytesIO()
 
-    handler = app.CalendarHandler.__new__(app.CalendarHandler)
+    handler = CalendarHandler.__new__(CalendarHandler)
     handler.rfile = rfile
     handler.wfile = wfile
     handler.headers = raw_headers
@@ -54,8 +55,8 @@ class TestCalendarAPIGetCalendar(unittest.TestCase):
     def setUp(self):
         self._fd, self._tmp = tempfile.mkstemp(suffix=".json")
         os.close(self._fd)
-        app.STORE = JsonFileStore(self._tmp)
-        app.LOGGED_USER_IDS.clear()
+        CalendarHandler.STORE = JsonFileStore(self._tmp)
+        CalendarHandler.LOGGED_USER_IDS.clear()
 
     def tearDown(self):
         for path in (self._tmp, self._tmp.replace(".json", "_settings.json")):
@@ -114,8 +115,8 @@ class TestCalendarAPIPostCalendar(unittest.TestCase):
     def setUp(self):
         self._fd, self._tmp = tempfile.mkstemp(suffix=".json")
         os.close(self._fd)
-        app.STORE = JsonFileStore(self._tmp)
-        app.LOGGED_USER_IDS.clear()
+        CalendarHandler.STORE = JsonFileStore(self._tmp)
+        CalendarHandler.LOGGED_USER_IDS.clear()
 
     def tearDown(self):
         for path in (self._tmp, self._tmp.replace(".json", "_settings.json")):
@@ -219,8 +220,8 @@ class TestCalendarAPISettings(unittest.TestCase):
     def setUp(self):
         self._fd, self._tmp = tempfile.mkstemp(suffix=".json")
         os.close(self._fd)
-        app.STORE = JsonFileStore(self._tmp)
-        app.LOGGED_USER_IDS.clear()
+        CalendarHandler.STORE = JsonFileStore(self._tmp)
+        CalendarHandler.LOGGED_USER_IDS.clear()
 
     def tearDown(self):
         for path in (self._tmp, self._tmp.replace(".json", "_settings.json")):
@@ -272,7 +273,7 @@ class TestBuildCalendarPayload(unittest.TestCase):
 
     def test_march_2025_has_correct_structure(self):
         """March 2025 payload contains 6 week rows with 7 cells each."""
-        payload = app.build_calendar_payload(2025, 3, {})
+        payload = build_calendar_payload(2025, 3, {})
         self.assertEqual(payload["status"], "ok")
         self.assertEqual(payload["month"], 3)
         self.assertEqual(len(payload["weeks"]), 6)
@@ -281,7 +282,7 @@ class TestBuildCalendarPayload(unittest.TestCase):
 
     def test_monday_cells_are_fixed_pday(self):
         """Monday cells always show PDAY and are not editable."""
-        payload = app.build_calendar_payload(2025, 3, {})
+        payload = build_calendar_payload(2025, 3, {})
         for week in payload["weeks"]:
             monday = next(c for c in week["cells"] if c["day_of_week"] == "Monday")
             self.assertEqual(monday["name"], "PDAY")
@@ -290,7 +291,7 @@ class TestBuildCalendarPayload(unittest.TestCase):
     def test_stored_entry_appears_in_payload(self):
         """An entry saved to the store is reflected in the calendar payload."""
         entries = {"1:Tuesday:1": "Helen"}
-        payload = app.build_calendar_payload(2025, 3, entries)
+        payload = build_calendar_payload(2025, 3, entries)
         first_tuesday = next(
             c
             for week in payload["weeks"]
