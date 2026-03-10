@@ -2,7 +2,9 @@ services:
   app:
     build: .
     ports:
-      - "5001:8080"
+      - "8080:8080"
     command: ["python", "app.py", "--dev", "--host", "0.0.0.0", "--port", "8080"]
+    # Uncoment this and remove the --dev to test with google data
+    # env_file: .env
     volumes:
       - ./calendar_data.json:/app/calendar_data.json
