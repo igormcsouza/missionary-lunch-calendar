@@ -2,7 +2,7 @@ name: Automatically Deploy to Fly.io
 
 on:
   push:
-    branches: [main]
+    branches: [deprecated-v0.4]
 
 jobs:
   deploy:

@@ -550,3 +550,20 @@ tbody td.week-cell {
   cursor: not-allowed;
   pointer-events: none;
 }
+
+.deprecation-notice {
+  position: fixed;
+  bottom: 12px;
+  right: 16px;
+  background: #b41e1e;
+  color: #fff;
+  font-size: 0.82rem;
+  font-weight: 600;
+  padding: 7px 14px;
+  border-radius: 8px;
+  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.45);
+  z-index: 200;
+  max-width: 320px;
+  text-align: center;
+  pointer-events: none;
+}
