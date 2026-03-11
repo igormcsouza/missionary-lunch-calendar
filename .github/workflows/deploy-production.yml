@@ -1,7 +1,4 @@
-# DEPRECATED: This workflow deploys to the legacy 'missionary-lunch-calendar' app on fly.io.
-# New deployments should use 'deploy-production.yml' which targets 'mission-leader-assistant'.
-# This workflow will be removed in a future update.
-name: Automatically Deploy to Fly.io (DEPRECATED)
+name: Deploy to Production (mission-leader-assistant)
 
 on:
   push:
@@ -23,10 +20,19 @@ jobs:
         with:
           token: ${{ secrets.GITHUB_TOKEN }}
           environment: production
-          environment-url: https://missionary-lunch-calendar.fly.dev
-          log-url: https://missionary-lunch-calendar.fly.dev
+          environment-url: https://mission-leader-assistant.fly.dev
+          log-url: https://fly.io/apps/mission-leader-assistant/monitoring
       - uses: superfly/flyctl-actions/setup-flyctl@v1
-      - run: flyctl deploy --remote-only
+      - name: Set environment secrets on Fly.io
+        run: |
+          flyctl secrets set \
+            GOOGLE_APPLICATION_CREDENTIALS_JSON="${{ secrets.GOOGLE_APPLICATION_CREDENTIALS_JSON }}" \
+            GOOGLE_CLOUD_PROJECT="${{ secrets.GOOGLE_CLOUD_PROJECT }}" \
+            FIRESTORE_COLLECTION="${{ secrets.FIRESTORE_COLLECTION }}" \
+            --app mission-leader-assistant
+        env:
+          FLY_API_TOKEN: ${{ secrets.FLY_API_TOKEN }}
+      - run: flyctl deploy --remote-only --app mission-leader-assistant
         env:
           FLY_API_TOKEN: ${{ secrets.FLY_API_TOKEN }}
       - name: Update deployment status (success)
