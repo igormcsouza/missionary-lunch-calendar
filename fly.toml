@@ -1,9 +1,9 @@
-# fly.toml app configuration file generated for missionary-lunch-calendar on 2026-03-02T12:55:19Z
+# fly.toml app configuration file generated for mission-leader-assistant on 2026-03-11T15:26:42Z
 #
 # See https://fly.io/docs/reference/configuration/ for information about how to use this file.
 #
 
-app = 'missionary-lunch-calendar'
+app = 'mission-leader-assistant'
 primary_region = 'gru'
 
 [build]
@@ -20,4 +20,4 @@ primary_region = 'gru'
   memory = '1gb'
   cpu_kind = 'shared'
   cpus = 1
-  memory_mb = 1024
+  memory_mb = 256
