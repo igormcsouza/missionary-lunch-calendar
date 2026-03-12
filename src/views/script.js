@@ -1396,7 +1396,7 @@ function bpExportPdf() {
   <div class="meta-item"><span class="meta-label">Ala</span><br>${_esc(plan.ward || "")}</div>
   <div class="meta-item"><span class="meta-label">Local</span><br>${_esc(plan.location || "")}</div>
   <div class="meta-item"><span class="meta-label">Líder que preside</span><br>${_esc(plan.conductingLeader || "")}</div>
-  <div class="meta-item"><span class="meta-label">Status</span><br>${statusPt}</div>
+  <div class="meta-item"><span class="meta-label">Status</span><br>${_esc(statusPt)}</div>
 </div>
 
 <h2>Candidatos</h2>
