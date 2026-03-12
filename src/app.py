@@ -27,7 +27,9 @@ def main():
         level=logging.INFO,
         format="%(asctime)s %(levelname)s %(name)s - %(message)s",
     )
-    CalendarHandler.STORE = create_store(dev=args.dev, data_file=DATA_FILE, collection="calendar_entries")
+    CalendarHandler.STORE = create_store(
+        dev=args.dev, data_file=DATA_FILE, collection="calendar_entries"
+    )
     server = HTTPServer((args.host, args.port), CalendarHandler)
     LOGGER.info("Running at http://%s:%s", args.host, args.port)
     try:
