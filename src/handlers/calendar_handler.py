@@ -12,6 +12,7 @@ class CalendarHandler(DefaultHandler):
     """HTTP request handler for the calendar API."""
 
     STORE = None
+    DEV = False
 
     def do_GET(self):  # pylint: disable=invalid-name
         """Handle GET requests for the calendar API."""
@@ -27,6 +28,10 @@ class CalendarHandler(DefaultHandler):
 
         if parsed.path == "/script.js":
             self.send_static("script.js", "application/javascript; charset=utf-8")
+            return
+
+        if parsed.path == "/api/config":
+            self.send_json(200, {"dev": self.DEV})
             return
 
         if parsed.path == "/api/settings":

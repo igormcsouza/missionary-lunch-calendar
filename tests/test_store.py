@@ -18,9 +18,8 @@ class TestJsonFileStoreClearEntry(unittest.TestCase):
         self.store = JsonFileStore(self.tmp)
 
     def tearDown(self):
-        for path in (self.tmp, self.tmp.replace(".json", "_settings.json")):
-            if os.path.exists(path):
-                os.unlink(path)
+        if os.path.exists(self.tmp):
+            os.unlink(self.tmp)
 
     def test_clear_only_entry_profile1(self):
         """Clearing the last entry for profile 1 removes it from storage."""

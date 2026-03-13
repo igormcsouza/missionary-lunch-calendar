@@ -41,6 +41,7 @@ def main():
     CalendarHandler.STORE = create_store(
         dev=args.dev, data_file=DATA_FILE, collection="calendar_entries"
     )
+    CalendarHandler.DEV = args.dev
     BaptismalPlanHandler.PLAN_STORE = create_baptismal_plan_store(
         dev=args.dev, data_file=DATA_FILE
     )

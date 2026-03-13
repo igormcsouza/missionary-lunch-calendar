@@ -49,6 +49,7 @@ const drawerUserPhoto = document.getElementById("drawerUserPhoto");
 const drawerUserName = document.getElementById("drawerUserName");
 const pdayOverrides = {};
 const mutedDaysByWeek = {};
+let DEV_MODE = false;
 let isCalendarInitialized = false;
 let currentWard = "";
 let currentProfile = 1;
@@ -203,6 +204,7 @@ function populateSettingsSlotFields() {
 }
 
 function getAuthenticatedUserId() {
+  if (DEV_MODE) return "local";
   const currentUser = auth.currentUser;
   if (!currentUser || !currentUser.uid) {
     return "";
@@ -849,7 +851,9 @@ menuToggleBtn.addEventListener("click", toggleDrawer);
 drawerBackdrop.addEventListener("click", closeDrawer);
 drawerSignOutBtn.addEventListener("click", async () => {
   closeDrawer();
-  await signOut(auth);
+  if (!DEV_MODE) {
+    await signOut(auth);
+  }
 });
 
 buildNavItems();
@@ -916,6 +920,7 @@ function bpStatusClass(status) {
 // ── API ───────────────────────────────────────────────────────────────────
 
 function bpGetHeaders() {
+  if (DEV_MODE) return { "X-User-Id": "local", "Content-Type": "application/json" };
   const user = auth.currentUser;
   return user ? { "X-User-Id": user.uid, "Content-Type": "application/json" } : {};
 }
@@ -1551,41 +1556,68 @@ bpExportPdfBtn.addEventListener("click", bpExportPdf);
 bpStatus.addEventListener("change", () => { if (bpEditorReady) bpAutoSave(); });
 bpNotes.addEventListener("blur", () => { if (bpEditorReady) bpAutoSave(); });
 
-onAuthStateChanged(auth, (user) => {
-  if (!user) {
-    calendarView.classList.add("hidden");
-    baptismalPlanView.classList.add("hidden");
-    menuToggleBtn.classList.add("hidden");
-    loginView.classList.remove("hidden");
-    loginStatusEl.textContent = "";
-    loginSpinner.classList.add("hidden");
-    googleIcon.style.display = "";
-    loginBtnText.textContent = "Entrar com Google";
-    googleLoginBtn.disabled = false;
-    currentWard = "";
-    currentRoute = "/calendar";
-    bpCurrentPlanId = null;
-    bpCurrentPlan = null;
-    bpPlanSummaries = [];
-    bpViewInitialized = false;
-    closeDrawer();
-    updateDrawerUser(null);
-    return;
+// ── App initialisation ────────────────────────────────────────────────────
+// Fetch server config first so that dev mode bypasses Firebase auth entirely.
+
+(async () => {
+  try {
+    const resp = await fetch("/api/config");
+    const config = await resp.json();
+    DEV_MODE = config.dev === true;
+  } catch (_) {
+    DEV_MODE = false;
   }
 
-  loginView.classList.add("hidden");
-  menuToggleBtn.classList.remove("hidden");
-  if (currentRoute === "/baptismal-plan") {
-    baptismalPlanView.classList.remove("hidden");
-  } else {
+  if (DEV_MODE) {
+    loginView.classList.add("hidden");
+    menuToggleBtn.classList.remove("hidden");
     calendarView.classList.remove("hidden");
+    updateDrawerUser({ displayName: "local", photoURL: null });
+    if (!isCalendarInitialized) {
+      renderHeader();
+      setDefaultMonth();
+      isCalendarInitialized = true;
+    }
+    loadSettings();
+    fetchCalendar();
+  } else {
+    onAuthStateChanged(auth, (user) => {
+      if (!user) {
+        calendarView.classList.add("hidden");
+        baptismalPlanView.classList.add("hidden");
+        menuToggleBtn.classList.add("hidden");
+        loginView.classList.remove("hidden");
+        loginStatusEl.textContent = "";
+        loginSpinner.classList.add("hidden");
+        googleIcon.style.display = "";
+        loginBtnText.textContent = "Entrar com Google";
+        googleLoginBtn.disabled = false;
+        currentWard = "";
+        currentRoute = "/calendar";
+        bpCurrentPlanId = null;
+        bpCurrentPlan = null;
+        bpPlanSummaries = [];
+        bpViewInitialized = false;
+        closeDrawer();
+        updateDrawerUser(null);
+        return;
+      }
+
+      loginView.classList.add("hidden");
+      menuToggleBtn.classList.remove("hidden");
+      if (currentRoute === "/baptismal-plan") {
+        baptismalPlanView.classList.remove("hidden");
+      } else {
+        calendarView.classList.remove("hidden");
+      }
+      updateDrawerUser(user);
+      if (!isCalendarInitialized) {
+        renderHeader();
+        setDefaultMonth();
+        isCalendarInitialized = true;
+      }
+      loadSettings();
+      fetchCalendar();
+    });
   }
-  updateDrawerUser(user);
-  if (!isCalendarInitialized) {
-    renderHeader();
-    setDefaultMonth();
-    isCalendarInitialized = true;
-  }
-  loadSettings();
-  fetchCalendar();
-});
+})();

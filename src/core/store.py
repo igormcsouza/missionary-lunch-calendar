@@ -128,12 +128,22 @@ def _new_plan_skeleton():
 
 
 class JsonFileStore:
-    """File-based JSON store for local/development use."""
+    """File-based JSON store for local/development use.
+
+    Data is stored in a single JSON file using the same document schema as
+    FirestoreStore so that the two backends remain interchangeable:
+
+        {
+          "<user_id>": {
+            "entries":   { "<occurrence>:<day>:<slot>": "<name>", ... },
+            "entries_2": { ... },
+            "settings":  { "ward": "...", ... }
+          }
+        }
+    """
+
     def __init__(self, data_file):
         self.path = Path.cwd() / data_file
-        base, _, ext = data_file.rpartition(".")
-        settings_file = f"{base}_settings.{ext}" if base else f"{data_file}_settings"
-        self.settings_path = Path.cwd() / settings_file
 
     def _read_raw(self):
         if not self.path.exists():
@@ -155,76 +165,43 @@ class JsonFileStore:
                 clean[key] = value
         return clean
 
-    def _is_legacy_entries_shape(self, raw):
-        return all(isinstance(k, str) and isinstance(v, str) for k, v in raw.items())
+    def _entries_field(self, profile):
+        """Return the document field name for the given profile (mirrors FirestoreStore)."""
+        return "entries" if profile == 1 else f"entries_{profile}"
 
-    def _sanitize_users_map(self, raw):
-        users_map = {}
-        for user_id, entries in raw.items():
-            if not isinstance(user_id, str):
-                continue
-            users_map[user_id] = self._sanitize_entries(entries)
-        return users_map
+    def _get_user_doc(self, raw, user_id):
+        user_doc = raw.get(user_id, {})
+        return user_doc if isinstance(user_doc, dict) else {}
 
     def load_entries(self, user_id, profile=1):
         """Load and return the calendar entries dict for the given user ID and profile."""
         raw = self._read_raw()
-        if not raw:
-            return {}
-        if self._is_legacy_entries_shape(raw):
-            return self._sanitize_entries(raw) if profile == 1 else {}
-
-        users_map = self._sanitize_users_map(raw)
-        all_entries = users_map.get(user_id, {})
-        if profile == 1:
-            # Profile-1 entry keys always start with an occurrence digit (1–5).
-            return {k: v for k, v in all_entries.items() if k[:1].isdigit()}
-        prefix = f"p{profile}:"
-        return {k[len(prefix):]: v for k, v in all_entries.items() if k.startswith(prefix)}
+        user_doc = self._get_user_doc(raw, user_id)
+        field = self._entries_field(profile)
+        return self._sanitize_entries(user_doc.get(field, {}))
 
     def save_entries(self, user_id, entries, profile=1):
         """Persist the calendar entries dict for the given user ID and profile."""
         raw = self._read_raw()
-        users_map = {}
-        if raw and not self._is_legacy_entries_shape(raw):
-            users_map = self._sanitize_users_map(raw)
-
-        all_entries = users_map.get(user_id, {})
-        clean = self._sanitize_entries(entries)
-        if profile == 1:
-            # Keep profile 2+ entries (keys that do not start with a digit), replace profile-1.
-            other = {k: v for k, v in all_entries.items() if not k[:1].isdigit()}
-            users_map[user_id] = {**other, **clean}
-        else:
-            prefix = f"p{profile}:"
-            other = {k: v for k, v in all_entries.items() if not k.startswith(prefix)}
-            users_map[user_id] = {**other, **{f"{prefix}{k}": v for k, v in clean.items()}}
-        self.path.write_text(json.dumps(users_map, indent=2), encoding="utf-8")
+        if not isinstance(raw.get(user_id), dict):
+            raw[user_id] = {}
+        field = self._entries_field(profile)
+        raw[user_id][field] = self._sanitize_entries(entries)
+        self.path.write_text(json.dumps(raw, indent=2), encoding="utf-8")
 
     def load_settings(self, user_id):
         """Load and return the settings dict for the given user ID."""
-        if not self.settings_path.exists():
-            return {}
-        try:
-            raw = json.loads(self.settings_path.read_text(encoding="utf-8"))
-        except json.JSONDecodeError:
-            return {}
-        if not isinstance(raw, dict):
-            return {}
-        return self._sanitize_entries(raw.get(user_id, {}))
+        raw = self._read_raw()
+        user_doc = self._get_user_doc(raw, user_id)
+        return self._sanitize_entries(user_doc.get("settings", {}))
 
     def save_settings(self, user_id, settings):
         """Persist the settings dict for the given user ID."""
-        existing = {}
-        if self.settings_path.exists():
-            try:
-                raw = json.loads(self.settings_path.read_text(encoding="utf-8"))
-                if isinstance(raw, dict):
-                    existing = raw
-            except json.JSONDecodeError:
-                pass
-        existing[user_id] = self._sanitize_entries(settings)
-        self.settings_path.write_text(json.dumps(existing, indent=2), encoding="utf-8")
+        raw = self._read_raw()
+        if not isinstance(raw.get(user_id), dict):
+            raw[user_id] = {}
+        raw[user_id]["settings"] = self._sanitize_entries(settings)
+        self.path.write_text(json.dumps(raw, indent=2), encoding="utf-8")
 
 
 class FirestoreStore:
@@ -325,7 +302,18 @@ def create_store(dev=False, data_file="calendar_data.json", collection="calendar
 
 
 class BaptismalPlanJsonStore:
-    """File-based JSON store for baptismal plans (local/development use)."""
+    """File-based JSON store for baptismal plans (local/development use).
+
+    Data is stored using the same document schema as BaptismalPlanFirestoreStore:
+
+        {
+          "<user_id>": {
+            "plans": {
+              "<plan_id>": { ...plan fields... }
+            }
+          }
+        }
+    """
 
     def __init__(self, data_file):
         base, _, ext = data_file.rpartition(".")
@@ -347,12 +335,19 @@ class BaptismalPlanJsonStore:
     def _write_raw(self, data):
         self.path.write_text(json.dumps(data, indent=2), encoding="utf-8")
 
+    def _get_plans_map(self, raw, user_id):
+        user_doc = raw.get(user_id, {})
+        if not isinstance(user_doc, dict):
+            return {}
+        plans_map = user_doc.get("plans", {})
+        return plans_map if isinstance(plans_map, dict) else {}
+
     def list_plans(self, user_id):
         """Return list of plan summaries ordered by serviceDate descending."""
         raw = self._read_raw()
-        user_plans = raw.get(user_id, {})
+        plans_map = self._get_plans_map(raw, user_id)
         summaries = []
-        for plan_id, plan_data in user_plans.items():
+        for plan_id, plan_data in plans_map.items():
             if not isinstance(plan_data, dict):
                 continue
             candidates = plan_data.get("candidates", [])
@@ -369,29 +364,31 @@ class BaptismalPlanJsonStore:
     def get_plan(self, user_id, plan_id):
         """Return full plan data or None if not found."""
         raw = self._read_raw()
-        plan = raw.get(user_id, {}).get(plan_id)
+        plan = self._get_plans_map(raw, user_id).get(plan_id)
         return plan if isinstance(plan, dict) else None
 
     def create_plan(self, user_id):
         """Create a new plan and return (plan_id, plan_data)."""
         raw = self._read_raw()
-        if user_id not in raw:
+        if not isinstance(raw.get(user_id), dict):
             raw[user_id] = {}
+        if not isinstance(raw[user_id].get("plans"), dict):
+            raw[user_id]["plans"] = {}
         plan_id = str(uuid.uuid4())
         now = datetime.now(timezone.utc).isoformat()
         plan = _new_plan_skeleton()
         plan["id"] = plan_id
         plan["createdAt"] = now
         plan["updatedAt"] = now
-        raw[user_id][plan_id] = plan
+        raw[user_id]["plans"][plan_id] = plan
         self._write_raw(raw)
         return plan_id, plan
 
     def update_plan(self, user_id, plan_id, plan_data):
         """Update an existing plan. Returns updated plan or None if not found."""
         raw = self._read_raw()
-        user_plans = raw.get(user_id, {})
-        existing = user_plans.get(plan_id)
+        plans_map = self._get_plans_map(raw, user_id)
+        existing = plans_map.get(plan_id)
         if not isinstance(existing, dict):
             return None
         now = datetime.now(timezone.utc).isoformat()
@@ -399,18 +396,23 @@ class BaptismalPlanJsonStore:
         plan["id"] = plan_id
         plan["createdAt"] = existing.get("createdAt", now)
         plan["updatedAt"] = now
-        raw[user_id][plan_id] = plan
+        if not isinstance(raw.get(user_id), dict):
+            raw[user_id] = {}
+        if not isinstance(raw[user_id].get("plans"), dict):
+            raw[user_id]["plans"] = {}
+        raw[user_id]["plans"][plan_id] = plan
         self._write_raw(raw)
         return plan
 
     def delete_plan(self, user_id, plan_id):
         """Delete a plan. Returns True if deleted, False if not found."""
         raw = self._read_raw()
-        user_plans = raw.get(user_id, {})
-        if plan_id not in user_plans:
+        plans_map = self._get_plans_map(raw, user_id)
+        if plan_id not in plans_map:
             return False
-        del user_plans[plan_id]
-        raw[user_id] = user_plans
+        del plans_map[plan_id]
+        if isinstance(raw.get(user_id), dict):
+            raw[user_id]["plans"] = plans_map
         self._write_raw(raw)
         return True
 

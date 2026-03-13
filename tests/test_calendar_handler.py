@@ -57,9 +57,8 @@ class TestCalendarHandlerGetCalendar(unittest.TestCase):
         CalendarHandler.LOGGED_USER_IDS.clear()
 
     def tearDown(self):
-        for path in (self._tmp, self._tmp.replace(".json", "_settings.json")):
-            if os.path.exists(path):
-                os.unlink(path)
+        if os.path.exists(self._tmp):
+            os.unlink(self._tmp)
 
     def test_get_calendar_returns_ok(self):
         """GET /api/calendar with valid params returns a 200 with weekly data."""
@@ -106,6 +105,25 @@ class TestCalendarHandlerGetCalendar(unittest.TestCase):
         self.assertEqual(status, 404)
         self.assertEqual(payload["status"], "error")
 
+    def test_get_config_returns_dev_false_by_default(self):
+        """GET /api/config returns dev=False when DEV is not set."""
+        CalendarHandler.DEV = False
+        handler, wfile = _make_handler("GET", "/api/config")
+        handler.do_GET()
+        status, payload = _parse_response(wfile)
+        self.assertEqual(status, 200)
+        self.assertIs(payload["dev"], False)
+
+    def test_get_config_returns_dev_true_when_set(self):
+        """GET /api/config returns dev=True when DEV is set to True."""
+        CalendarHandler.DEV = True
+        handler, wfile = _make_handler("GET", "/api/config")
+        handler.do_GET()
+        status, payload = _parse_response(wfile)
+        self.assertEqual(status, 200)
+        self.assertIs(payload["dev"], True)
+        CalendarHandler.DEV = False  # restore
+
 
 class TestCalendarHandlerPostCalendar(unittest.TestCase):
     """Tests for POST /api/calendar."""
@@ -117,9 +135,8 @@ class TestCalendarHandlerPostCalendar(unittest.TestCase):
         CalendarHandler.LOGGED_USER_IDS.clear()
 
     def tearDown(self):
-        for path in (self._tmp, self._tmp.replace(".json", "_settings.json")):
-            if os.path.exists(path):
-                os.unlink(path)
+        if os.path.exists(self._tmp):
+            os.unlink(self._tmp)
 
     def test_post_calendar_saves_entry(self):
         """POST /api/calendar persists a new name and returns it."""
@@ -222,9 +239,8 @@ class TestCalendarHandlerGetSettings(unittest.TestCase):
         CalendarHandler.LOGGED_USER_IDS.clear()
 
     def tearDown(self):
-        for path in (self._tmp, self._tmp.replace(".json", "_settings.json")):
-            if os.path.exists(path):
-                os.unlink(path)
+        if os.path.exists(self._tmp):
+            os.unlink(self._tmp)
 
     def test_returns_empty_settings_for_new_user(self):
         """GET /api/settings returns an empty dict for a user with no stored settings."""
@@ -263,9 +279,8 @@ class TestCalendarHandlerPostSettings(unittest.TestCase):
         CalendarHandler.LOGGED_USER_IDS.clear()
 
     def tearDown(self):
-        for path in (self._tmp, self._tmp.replace(".json", "_settings.json")):
-            if os.path.exists(path):
-                os.unlink(path)
+        if os.path.exists(self._tmp):
+            os.unlink(self._tmp)
 
     def test_saves_ward(self):
         """POST /api/settings persists the ward and returns it."""
