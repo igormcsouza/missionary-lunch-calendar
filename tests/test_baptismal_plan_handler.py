@@ -189,3 +189,48 @@ class TestBaptismalPlanHandlerUpdatePlan(unittest.TestCase):
         handler = _make_handler("PUT", "/api/unknown-route", user_id="uid1")
         handler.do_PUT()
         self.assertEqual(handler.response_code, 404)
+
+
+class TestBaptismalPlanHandlerDeletePlan(unittest.TestCase):
+    """Tests for DELETE /api/baptismal-plans/{planId}."""
+
+    def setUp(self):
+        """Set up mock store."""
+        self.mock_store = MagicMock()
+        BaptismalPlanHandler.PLAN_STORE = self.mock_store
+
+    def test_delete_plan_returns_ok(self):
+        """DELETE /api/baptismal-plans/{id} removes the plan and returns 200."""
+        plan_id = "8f778763-14f5-405e-9abe-fb885dac5ff4"
+        self.mock_store.delete_plan.return_value = True
+        handler = _make_handler("DELETE", f"/api/baptismal-plans/{plan_id}", user_id="uid1")
+        handler.do_DELETE()
+        self.assertEqual(handler.response_code, 200)
+        self.assertEqual(handler.response_body["status"], "ok")
+
+    def test_delete_plan_not_found_returns_404(self):
+        """DELETE /api/baptismal-plans/{id} returns 404 when the plan does not exist."""
+        plan_id = "8f778763-14f5-405e-9abe-fb885dac5ff4"
+        self.mock_store.delete_plan.return_value = False
+        handler = _make_handler("DELETE", f"/api/baptismal-plans/{plan_id}", user_id="uid1")
+        handler.do_DELETE()
+        self.assertEqual(handler.response_code, 404)
+
+    def test_delete_plan_missing_user_returns_401(self):
+        """DELETE /api/baptismal-plans/{id} without X-User-Id returns 401."""
+        plan_id = "8f778763-14f5-405e-9abe-fb885dac5ff4"
+        handler = _make_handler("DELETE", f"/api/baptismal-plans/{plan_id}")
+        handler.do_DELETE()
+        self.assertEqual(handler.response_code, 401)
+
+    def test_delete_plan_invalid_id_returns_400(self):
+        """DELETE /api/baptismal-plans/{id} returns 400 for a non-UUID plan ID."""
+        handler = _make_handler("DELETE", "/api/baptismal-plans/not-a-uuid", user_id="uid1")
+        handler.do_DELETE()
+        self.assertEqual(handler.response_code, 400)
+
+    def test_delete_plan_unknown_path_returns_404(self):
+        """DELETE on an unknown path returns 404."""
+        handler = _make_handler("DELETE", "/api/unknown-route", user_id="uid1")
+        handler.do_DELETE()
+        self.assertEqual(handler.response_code, 404)

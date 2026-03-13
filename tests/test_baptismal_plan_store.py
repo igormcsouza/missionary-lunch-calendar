@@ -75,7 +75,7 @@ class TestNewPlanSkeleton(unittest.TestCase):
         plan = _new_plan_skeleton()
         for key in ("serviceDate", "serviceTime", "ward", "location",
                     "conductingLeader", "status", "candidates", "ordinances",
-                    "witnesses", "program", "notes"):
+                    "witnesses", "program", "talks", "notes"):
             self.assertIn(key, plan)
 
     def test_default_status_is_draft(self):
@@ -83,15 +83,20 @@ class TestNewPlanSkeleton(unittest.TestCase):
         plan = _new_plan_skeleton()
         self.assertEqual(plan["status"], "Draft")
 
-    def test_program_has_14_items(self):
-        """_new_plan_skeleton generates the default 14-item service program."""
+    def test_program_has_6_items(self):
+        """_new_plan_skeleton generates the default 6-item service program."""
         plan = _new_plan_skeleton()
-        self.assertEqual(len(plan["program"]), 14)
+        self.assertEqual(len(plan["program"]), 6)
 
-    def test_first_program_item_is_prelude(self):
-        """_new_plan_skeleton starts the program with Prelúdio."""
+    def test_first_program_item_is_initial_hymn(self):
+        """_new_plan_skeleton starts the program with Hino Inicial."""
         plan = _new_plan_skeleton()
-        self.assertEqual(plan["program"][0]["item"], "Prelúdio")
+        self.assertEqual(plan["program"][0]["item"], "Hino Inicial")
+
+    def test_skeleton_has_empty_talks(self):
+        """_new_plan_skeleton initialises talks as an empty list."""
+        plan = _new_plan_skeleton()
+        self.assertEqual(plan["talks"], [])
 
 
 class TestBaptismalPlanJsonStore(unittest.TestCase):
@@ -125,9 +130,9 @@ class TestBaptismalPlanJsonStore(unittest.TestCase):
         self.assertIn("updatedAt", plan)
 
     def test_create_plan_has_default_program(self):
-        """create_plan populates the program with the 14-item default template."""
+        """create_plan populates the program with the 6-item default template."""
         _, plan = self.store.create_plan(self.user_id)
-        self.assertEqual(len(plan["program"]), 14)
+        self.assertEqual(len(plan["program"]), 6)
 
     def test_get_plan_returns_created_plan(self):
         """get_plan retrieves the plan previously created for the same user."""
@@ -189,3 +194,20 @@ class TestBaptismalPlanJsonStore(unittest.TestCase):
         plan_id, _ = self.store.create_plan("user_a")
         self.assertEqual(self.store.list_plans("user_b"), [])
         self.assertIsNone(self.store.get_plan("user_b", plan_id))
+
+    def test_delete_plan_removes_plan(self):
+        """delete_plan removes the plan from storage."""
+        plan_id, _ = self.store.create_plan(self.user_id)
+        self.store.delete_plan(self.user_id, plan_id)
+        self.assertIsNone(self.store.get_plan(self.user_id, plan_id))
+
+    def test_delete_plan_returns_true_on_success(self):
+        """delete_plan returns True when the plan is found and removed."""
+        plan_id, _ = self.store.create_plan(self.user_id)
+        result = self.store.delete_plan(self.user_id, plan_id)
+        self.assertTrue(result)
+
+    def test_delete_plan_returns_false_for_missing_plan(self):
+        """delete_plan returns False when the plan_id does not exist."""
+        result = self.store.delete_plan(self.user_id, "nonexistent-id")
+        self.assertFalse(result)

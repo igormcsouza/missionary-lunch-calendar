@@ -6,20 +6,12 @@ from datetime import datetime, timezone
 from pathlib import Path
 
 DEFAULT_BAPTISMAL_PROGRAM = [
-    {"item": "Prelúdio", "assignee": ""},
-    {"item": "Boas-vindas", "assignee": ""},
     {"item": "Hino Inicial", "assignee": ""},
     {"item": "Oração Inicial", "assignee": ""},
-    {"item": "Discurso: Batismo", "assignee": ""},
-    {"item": "Discurso: Espírito Santo", "assignee": ""},
     {"item": "Seleção Musical", "assignee": ""},
-    {"item": "Ordenança do Batismo", "assignee": ""},
-    {"item": "Momento de Reverência", "assignee": ""},
-    {"item": "Confirmação", "assignee": ""},
     {"item": "Testemunhos", "assignee": ""},
     {"item": "Hino Final", "assignee": ""},
     {"item": "Oração Final", "assignee": ""},
-    {"item": "Pós-lúdio", "assignee": ""},
 ]
 
 
@@ -40,10 +32,8 @@ def _sanitize_baptismal_plan(data):
             "id": _str_val(candidate.get("id")),
             "fullName": _str_val(candidate.get("fullName")),
             "birthDate": _str_val(candidate.get("birthDate")),
-            "age": _str_val(candidate.get("age")),
             "candidateType": _str_val(candidate.get("candidateType")),
             "interviewCompleted": bool(candidate.get("interviewCompleted")),
-            "interviewedBy": _str_val(candidate.get("interviewedBy")),
         }
 
     def _sanitize_ordinance(ordinance):
@@ -73,6 +63,15 @@ def _sanitize_baptismal_plan(data):
             "assignee": _str_val(item.get("assignee")),
         }
 
+    def _sanitize_talk(talk):
+        if not isinstance(talk, dict):
+            return None
+        return {
+            "id": _str_val(talk.get("id")),
+            "talkPerson": _str_val(talk.get("talkPerson")),
+            "talkTheme": _str_val(talk.get("talkTheme")),
+        }
+
     plan = {
         "serviceDate": _str_val(data.get("serviceDate")),
         "serviceTime": _str_val(data.get("serviceTime")),
@@ -84,6 +83,7 @@ def _sanitize_baptismal_plan(data):
         "ordinances": [],
         "witnesses": [],
         "program": [],
+        "talks": [],
         "notes": _str_val(data.get("notes")),
     }
     for candidate in data.get("candidates", []):
@@ -102,6 +102,10 @@ def _sanitize_baptismal_plan(data):
         sanitized = _sanitize_program_item(item)
         if sanitized is not None:
             plan["program"].append(sanitized)
+    for talk in data.get("talks", []):
+        sanitized = _sanitize_talk(talk)
+        if sanitized is not None:
+            plan["talks"].append(sanitized)
     return plan
 
 
@@ -118,6 +122,7 @@ def _new_plan_skeleton():
         "ordinances": [],
         "witnesses": [],
         "program": [dict(item) for item in DEFAULT_BAPTISMAL_PROGRAM],
+        "talks": [],
         "notes": "",
     }
 
@@ -398,6 +403,17 @@ class BaptismalPlanJsonStore:
         self._write_raw(raw)
         return plan
 
+    def delete_plan(self, user_id, plan_id):
+        """Delete a plan. Returns True if deleted, False if not found."""
+        raw = self._read_raw()
+        user_plans = raw.get(user_id, {})
+        if plan_id not in user_plans:
+            return False
+        del user_plans[plan_id]
+        raw[user_id] = user_plans
+        self._write_raw(raw)
+        return True
+
 
 class BaptismalPlanFirestoreStore:
     """Cloud Firestore-backed store for baptismal plans."""
@@ -501,6 +517,15 @@ class BaptismalPlanFirestoreStore:
         plans_map[plan_id] = plan
         self._doc_ref(user_id).set({"plans": plans_map}, merge=True)
         return plan
+
+    def delete_plan(self, user_id, plan_id):
+        """Delete a plan. Returns True if deleted, False if not found."""
+        plans_map = self._read_plans_map(user_id)
+        if plan_id not in plans_map:
+            return False
+        del plans_map[plan_id]
+        self._doc_ref(user_id).set({"plans": plans_map})
+        return True
 
 
 def create_baptismal_plan_store(dev=False, data_file="calendar_data.json"):

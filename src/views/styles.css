@@ -655,8 +655,9 @@ tbody td.week-cell {
 /* ── Baptismal Plan View ─────────────────────────────── */
 
 .bp-wrap {
-  width: 100%;
-  min-height: 100vh;
+  position: fixed;
+  inset: 0;
+  overflow: hidden;
   display: flex;
   align-items: stretch;
 }
@@ -664,7 +665,7 @@ tbody td.week-cell {
 .bp-layout {
   display: flex;
   width: 100%;
-  min-height: 100vh;
+  height: 100%;
   gap: 0;
 }
 
@@ -676,8 +677,9 @@ tbody td.week-cell {
   border-right: 1px solid var(--line);
   display: flex;
   flex-direction: column;
-  padding: 20px 0 0;
-  min-height: 100vh;
+  padding-top: 60px;
+  height: 100%;
+  overflow: hidden;
 }
 
 .bp-history-header {
@@ -703,10 +705,14 @@ tbody td.week-cell {
 }
 
 .bp-plan-item {
-  padding: 12px 16px;
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  padding: 12px 10px 12px 16px;
   cursor: pointer;
   border-left: 3px solid transparent;
   transition: background 0.15s;
+  gap: 8px;
 }
 
 .bp-plan-item:hover {
@@ -716,6 +722,11 @@ tbody td.week-cell {
 .bp-plan-item.active {
   border-left-color: var(--accent);
   background: rgba(59, 200, 180, 0.1);
+}
+
+.bp-plan-item-content {
+  flex: 1;
+  min-width: 0;
 }
 
 .bp-plan-item-date {
@@ -758,13 +769,35 @@ tbody td.week-cell {
   color: #94a3b8;
 }
 
+.bp-plan-item-delete {
+  flex-shrink: 0;
+  background: none;
+  border: none;
+  cursor: pointer;
+  color: var(--subtle);
+  padding: 4px;
+  border-radius: 4px;
+  display: flex;
+  align-items: center;
+  opacity: 0;
+  transition: opacity 0.15s, color 0.15s;
+}
+
+.bp-plan-item:hover .bp-plan-item-delete {
+  opacity: 1;
+}
+
+.bp-plan-item-delete:hover {
+  color: #f87171;
+}
+
 /* Right panel */
 .bp-editor-area {
   flex: 1;
   min-width: 0;
   padding: 24px 32px;
   overflow-y: auto;
-  max-height: 100vh;
+  height: 100%;
 }
 
 .bp-empty-state {
@@ -1054,9 +1087,15 @@ tbody td.week-cell {
   gap: 6px;
 }
 
+.bp-program-pair {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 6px;
+}
+
 .bp-program-item {
   display: grid;
-  grid-template-columns: 220px 1fr;
+  grid-template-columns: 180px 1fr;
   align-items: center;
   gap: 12px;
   padding: 8px 12px;
@@ -1070,6 +1109,39 @@ tbody td.week-cell {
   color: var(--ink);
 }
 
+/* Talks subsection */
+.bp-talks-section {
+  background: #0f1823;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  padding: 10px 12px;
+}
+
+.bp-talks-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 8px;
+}
+
+.bp-talks-title {
+  font-size: 0.9rem;
+  color: var(--ink);
+  font-weight: 500;
+}
+
+.bp-talk-row {
+  display: grid;
+  grid-template-columns: 1fr 1fr auto;
+  align-items: center;
+  gap: 8px;
+  margin-top: 6px;
+}
+
+.bp-talk-remove {
+  padding: 6px 10px;
+}
+
 .bp-empty-note {
   color: var(--subtle);
   font-style: italic;
@@ -1080,18 +1152,21 @@ tbody td.week-cell {
 @media (max-width: 900px) {
   .bp-layout {
     flex-direction: column;
+    overflow-y: auto;
+    height: auto;
   }
 
   .bp-history {
     width: 100%;
-    min-height: unset;
+    height: auto;
+    padding-top: 60px;
     border-right: none;
     border-bottom: 1px solid var(--line);
   }
 
   .bp-editor-area {
     padding: 16px;
-    max-height: unset;
+    height: auto;
   }
 
   .bp-form-grid {
@@ -1102,7 +1177,20 @@ tbody td.week-cell {
     grid-template-columns: 1fr;
   }
 
+  .bp-program-pair {
+    grid-template-columns: 1fr;
+  }
+
   .bp-program-item {
     grid-template-columns: 1fr;
+  }
+
+  .bp-talk-row {
+    grid-template-columns: 1fr auto;
+    grid-template-rows: auto auto;
+  }
+
+  .bp-talk-row .bp-t-theme {
+    grid-column: 1;
   }
 }

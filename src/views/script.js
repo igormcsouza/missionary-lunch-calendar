@@ -978,11 +978,27 @@ function bpRenderPlanList(summaries) {
       ? s.candidates.map((n) => n || "Sem nome").join(", ")
       : "Sem candidatos";
     const statusPt = BP_STATUS_PT[s.status] || s.status;
-    li.innerHTML = `
+    const contentDiv = document.createElement("div");
+    contentDiv.className = "bp-plan-item-content";
+    contentDiv.innerHTML = `
       <div class="bp-plan-item-date">${bpFormatDate(s.serviceDate)}</div>
       <div class="bp-plan-item-names">Batismo: ${names}</div>
       <span class="bp-plan-item-status ${bpStatusClass(s.status)}">${statusPt}</span>`;
-    li.addEventListener("click", () => bpLoadPlan(s.id));
+    contentDiv.addEventListener("click", () => bpLoadPlan(s.id));
+
+    const delBtn = document.createElement("button");
+    delBtn.className = "bp-plan-item-delete";
+    delBtn.type = "button";
+    delBtn.setAttribute("aria-label", "Excluir planejamento");
+    delBtn.title = "Excluir";
+    delBtn.innerHTML = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" xmlns="http://www.w3.org/2000/svg" width="14" height="14"><polyline points="3,6 5,6 21,6"></polyline><path d="M19,6l-1,14H6L5,6"></path><path d="M10,11v6"></path><path d="M14,11v6"></path><path d="M9,6V4h6v2"></path></svg>`;
+    delBtn.addEventListener("click", (e) => {
+      e.stopPropagation();
+      bpHandleDeletePlan(s.id);
+    });
+
+    li.appendChild(contentDiv);
+    li.appendChild(delBtn);
     bpPlanList.appendChild(li);
   }
 }
@@ -1009,19 +1025,11 @@ function bpRenderCandidates(candidates) {
           <input class="bp-input bp-c-birthDate" type="date" value="${_esc(c.birthDate)}" />
         </div>
         <div class="bp-field">
-          <label class="bp-label">Idade</label>
-          <input class="bp-input bp-c-age" type="text" value="${_esc(c.age)}" placeholder="Idade" />
-        </div>
-        <div class="bp-field">
           <label class="bp-label">Tipo</label>
           <select class="bp-select bp-c-candidateType">
             <option value="Convert" ${c.candidateType === "Convert" ? "selected" : ""}>Converso</option>
             <option value="ChildOfRecord" ${c.candidateType === "ChildOfRecord" ? "selected" : ""}>Filho de Registro</option>
           </select>
-        </div>
-        <div class="bp-field">
-          <label class="bp-label">Entrevistado por</label>
-          <input class="bp-input bp-c-interviewedBy" type="text" value="${_esc(c.interviewedBy)}" placeholder="Nome" />
         </div>
         <div class="bp-field bp-checkbox-field">
           <input class="bp-checkbox bp-c-interviewCompleted" id="bpIC_${c.id}" type="checkbox" ${c.interviewCompleted ? "checked" : ""} />
@@ -1123,20 +1131,74 @@ function bpRenderWitnesses(candidates, witnesses) {
   });
 }
 
-function bpRenderProgram(program) {
+function bpRenderTalkRow(container, talk) {
+  const row = document.createElement("div");
+  row.className = "bp-talk-row";
+  row.dataset.talkId = talk.id;
+  row.innerHTML = `
+    <input class="bp-input bp-t-person" type="text" value="${_esc(talk.talkPerson || "")}" placeholder="Nome do orador" />
+    <input class="bp-input bp-t-theme" type="text" value="${_esc(talk.talkTheme || "")}" placeholder="Tema" />
+    <button class="bp-btn-danger bp-talk-remove" type="button" aria-label="Remover discurso">×</button>`;
+  row.querySelector("button").addEventListener("click", () => {
+    if (bpEditorReady) bpHandleRemoveTalk(talk.id);
+  });
+  row.querySelectorAll(".bp-input").forEach((el) => {
+    el.addEventListener("blur", () => { if (bpEditorReady) bpAutoSave(); });
+  });
+  container.appendChild(row);
+}
+
+function bpRenderProgram(program, talks) {
   bpProgramList.innerHTML = "";
-  (program || []).forEach((item, idx) => {
+  const items = program || [];
+
+  function renderStaticItem(item, idx) {
     const row = document.createElement("div");
     row.className = "bp-program-item";
     row.dataset.programIndex = idx;
     row.innerHTML = `
       <span class="bp-program-item-name">${_esc(item.item)}</span>
       <input class="bp-input bp-p-assignee" type="text" value="${_esc(item.assignee || "")}" placeholder="Responsável" />`;
-    bpProgramList.appendChild(row);
     row.querySelector(".bp-p-assignee").addEventListener("blur", () => {
       if (bpEditorReady) bpAutoSave();
     });
+    return row;
+  }
+
+  // Pair 1: Hino Inicial + Oração Inicial
+  const pairStart = document.createElement("div");
+  pairStart.className = "bp-program-pair";
+  if (items[0]) pairStart.appendChild(renderStaticItem(items[0], 0));
+  if (items[1]) pairStart.appendChild(renderStaticItem(items[1], 1));
+  bpProgramList.appendChild(pairStart);
+
+  // Talks subsection
+  const talksSection = document.createElement("div");
+  talksSection.className = "bp-talks-section";
+  talksSection.innerHTML = `
+    <div class="bp-talks-header">
+      <span class="bp-talks-title">Discursos</span>
+      <button id="bpAddTalkBtn" class="bp-btn-secondary bp-btn-small" type="button">+ Adicionar Discurso</button>
+    </div>`;
+  const talksBody = document.createElement("div");
+  talksBody.id = "bpTalksBody";
+  talksSection.appendChild(talksBody);
+  bpProgramList.appendChild(talksSection);
+  (talks || []).forEach((talk) => bpRenderTalkRow(talksBody, talk));
+  talksSection.querySelector("#bpAddTalkBtn").addEventListener("click", () => {
+    if (bpEditorReady) bpHandleAddTalk();
   });
+
+  // Middle items: Seleção Musical, Testemunhos
+  if (items[2]) bpProgramList.appendChild(renderStaticItem(items[2], 2));
+  if (items[3]) bpProgramList.appendChild(renderStaticItem(items[3], 3));
+
+  // Pair 2: Hino Final + Oração Final
+  const pairEnd = document.createElement("div");
+  pairEnd.className = "bp-program-pair";
+  if (items[4]) pairEnd.appendChild(renderStaticItem(items[4], 4));
+  if (items[5]) pairEnd.appendChild(renderStaticItem(items[5], 5));
+  bpProgramList.appendChild(pairEnd);
 }
 
 function bpRenderEditor(plan) {
@@ -1155,7 +1217,7 @@ function bpRenderEditor(plan) {
   bpRenderCandidates(plan.candidates || []);
   bpRenderOrdinances(plan.candidates || [], plan.ordinances || []);
   bpRenderWitnesses(plan.candidates || [], plan.witnesses || []);
-  bpRenderProgram(plan.program || []);
+  bpRenderProgram(plan.program || [], plan.talks || []);
 
   bpEditorReady = true;
 }
@@ -1177,10 +1239,8 @@ function bpCollectPlanData() {
       id: card.dataset.candidateId,
       fullName: card.querySelector(".bp-c-fullName").value,
       birthDate: card.querySelector(".bp-c-birthDate").value,
-      age: card.querySelector(".bp-c-age").value,
       candidateType: card.querySelector(".bp-c-candidateType").value,
       interviewCompleted: card.querySelector(".bp-c-interviewCompleted").checked,
-      interviewedBy: card.querySelector(".bp-c-interviewedBy").value,
     });
   });
 
@@ -1210,6 +1270,18 @@ function bpCollectPlanData() {
     program.push({ item: itemName, assignee });
   });
 
+  const talks = [];
+  const talksBody = document.getElementById("bpTalksBody");
+  if (talksBody) {
+    talksBody.querySelectorAll(".bp-talk-row").forEach((row) => {
+      talks.push({
+        id: row.dataset.talkId,
+        talkPerson: row.querySelector(".bp-t-person").value,
+        talkTheme: row.querySelector(".bp-t-theme").value,
+      });
+    });
+  }
+
   return {
     serviceDate: bpServiceDate.value,
     serviceTime: bpServiceTime.value,
@@ -1221,6 +1293,7 @@ function bpCollectPlanData() {
     ordinances,
     witnesses,
     program,
+    talks,
     notes: bpNotes.value,
   };
 }
@@ -1301,10 +1374,8 @@ function bpHandleAddCandidate() {
     id: newId,
     fullName: "",
     birthDate: "",
-    age: "",
     candidateType: "Convert",
     interviewCompleted: false,
-    interviewedBy: "",
   };
   bpCurrentPlan.candidates = [...(bpCurrentPlan.candidates || []), newCandidate];
   bpCurrentPlan.ordinances = [...(bpCurrentPlan.ordinances || []), { candidateId: newId, baptizerName: "", baptizerPriesthood: "", confirmationBy: "" }];
@@ -1324,6 +1395,49 @@ async function initBaptismalPlanView() {
   bpRenderPlanList(plans);
 }
 
+function bpHandleAddTalk() {
+  if (!bpCurrentPlan) return;
+  const newId = `t_${Date.now()}_${Math.random().toString(36).slice(2, 7)}`;
+  const newTalk = { id: newId, talkPerson: "", talkTheme: "" };
+  bpCurrentPlan.talks = [...(bpCurrentPlan.talks || []), newTalk];
+  const talksBody = document.getElementById("bpTalksBody");
+  if (talksBody) bpRenderTalkRow(talksBody, newTalk);
+  bpAutoSave();
+}
+
+function bpHandleRemoveTalk(talkId) {
+  if (!bpCurrentPlan) return;
+  bpCurrentPlan.talks = (bpCurrentPlan.talks || []).filter((t) => t.id !== talkId);
+  const talksBody = document.getElementById("bpTalksBody");
+  if (talksBody) {
+    talksBody.innerHTML = "";
+    (bpCurrentPlan.talks || []).forEach((t) => bpRenderTalkRow(talksBody, t));
+  }
+  bpAutoSave();
+}
+
+async function bpApiDeletePlan(planId) {
+  const resp = await fetch(`/api/baptismal-plans/${planId}`, {
+    method: "DELETE",
+    headers: bpGetHeaders(),
+  });
+  return resp.ok;
+}
+
+async function bpHandleDeletePlan(planId) {
+  if (!window.confirm("Tem certeza que deseja excluir este planejamento? Esta ação não pode ser desfeita.")) return;
+  const ok = await bpApiDeletePlan(planId);
+  if (!ok) return;
+  bpPlanSummaries = bpPlanSummaries.filter((p) => p.id !== planId);
+  if (bpCurrentPlanId === planId) {
+    bpCurrentPlanId = null;
+    bpCurrentPlan = null;
+    bpEditorContent.classList.add("hidden");
+    bpEmptyState.classList.remove("hidden");
+  }
+  bpRenderPlanList(bpPlanSummaries);
+}
+
 // ── PDF Export ────────────────────────────────────────────────────────────
 
 function bpExportPdf() {
@@ -1339,8 +1453,7 @@ function bpExportPdf() {
     const interv = c.interviewCompleted ? "Sim" : "Não";
     return `<tr>
       <td>${i + 1}</td><td>${_esc(c.fullName)}</td><td>${_esc(c.birthDate)}</td>
-      <td>${_esc(c.age)}</td><td>${typePt}</td>
-      <td>${interv}</td><td>${_esc(c.interviewedBy)}</td>
+      <td>${typePt}</td><td>${interv}</td>
     </tr>`;
   }).join("");
 
@@ -1369,12 +1482,16 @@ function bpExportPdf() {
     </tr>`;
   }).join("");
 
+  const talkRows = (plan.talks || []).map((t) =>
+    `<tr><td>${_esc(t.talkPerson || "")}</td><td>${_esc(t.talkTheme || "")}</td></tr>`
+  ).join("");
+
   const progRows = (plan.program || []).map((item) =>
     `<tr><td>${_esc(item.item)}</td><td>${_esc(item.assignee || "")}</td></tr>`
   ).join("");
 
   const html = `<!DOCTYPE html><html lang="pt-BR"><head><meta charset="UTF-8">
-<title>baptismo-${dateStr}</title>
+<title>planejamento-batismal-${dateStr}</title>
 <style>
   body { font-family: Arial, sans-serif; font-size: 12px; color: #222; margin: 24px; }
   h1 { font-size: 18px; margin-bottom: 4px; }
@@ -1401,8 +1518,7 @@ function bpExportPdf() {
 
 <h2>Candidatos</h2>
 <table><thead><tr>
-  <th>#</th><th>Nome Completo</th><th>Nasc.</th><th>Idade</th><th>Tipo</th>
-  <th>Entrevista</th><th>Entrevistado por</th>
+  <th>#</th><th>Nome Completo</th><th>Nasc.</th><th>Tipo</th><th>Entrevista</th>
 </tr></thead><tbody>${candidateRows}</tbody></table>
 
 <h2>Ordenanças</h2>
@@ -1418,6 +1534,8 @@ function bpExportPdf() {
 <h2>Programa da Reunião</h2>
 <table><thead><tr><th>Momento</th><th>Responsável</th></tr></thead><tbody>${progRows}</tbody></table>
 
+${(plan.talks || []).length > 0 ? `<h2>Discursos</h2><table><thead><tr><th>Orador</th><th>Tema</th></tr></thead><tbody>${talkRows}</tbody></table>` : ""}
+
 ${plan.notes ? `<h2>Observações</h2><div class="notes">${_esc(plan.notes)}</div>` : ""}
 <script>window.onload = function(){ window.print(); }<\/script>
 </body></html>`;
@@ -1425,7 +1543,7 @@ ${plan.notes ? `<h2>Observações</h2><div class="notes">${_esc(plan.notes)}</di
   const win = window.open("", "_blank");
   if (!win) return;
   win.document.write(html);
-  win.document.title = `baptismo-${dateStr}`;
+  win.document.title = `planejamento-batismal-${dateStr}`;
   win.document.close();
 }
 

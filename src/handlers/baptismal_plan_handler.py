@@ -66,6 +66,21 @@ class BaptismalPlanHandler(CalendarHandler):
 
         self.send_json(404, {"status": "error", "error": "Not found"})
 
+    def do_DELETE(self):  # pylint: disable=invalid-name
+        """Handle DELETE requests for baptismal-plan removal."""
+        parsed = urlparse(self.path)
+        path = parsed.path
+
+        if path.startswith(_BP_PREFIX + "/"):
+            plan_id = path[len(_BP_PREFIX) + 1:]
+            if _valid_plan_id(plan_id):
+                self._handle_delete_plan(plan_id)
+            else:
+                self.send_json(400, {"status": "error", "error": "Invalid plan ID"})
+            return
+
+        self.send_json(404, {"status": "error", "error": "Not found"})
+
     # ── handlers ─────────────────────────────────────────────────────────────
 
     def _handle_list_plans(self):
@@ -114,3 +129,18 @@ class BaptismalPlanHandler(CalendarHandler):
 
         LOGGER.info("PUT /api/baptismal-plans/%s user_id=%s", plan_id, user_id)
         self.send_json(200, {"status": "ok", "plan": plan})
+
+    def _handle_delete_plan(self, plan_id):
+        """Handle DELETE /api/baptismal-plans/{planId}."""
+        user_id = self.get_user_id()
+        if not user_id:
+            self.send_json(401, {"status": "error", "error": "User not authenticated"})
+            return
+
+        deleted = self.PLAN_STORE.delete_plan(user_id, plan_id)
+        if not deleted:
+            self.send_json(404, {"status": "error", "error": "Plan not found"})
+            return
+
+        LOGGER.info("DELETE /api/baptismal-plans/%s user_id=%s", plan_id, user_id)
+        self.send_json(200, {"status": "ok"})
