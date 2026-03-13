@@ -1517,7 +1517,7 @@ function bpExportPdf() {
   <th>#</th><th>Nome Completo</th><th>Nasc.</th><th>Tipo</th><th>Entrevista</th>
 </tr></thead><tbody>${candidateRows}</tbody></table>
 
-${progStartRows ? `<h2>Início da Reunião</h2><table><thead><tr><th>Momento</th><th>Responsável</th></tr></thead><tbody>${progStartRows}</tbody></table>` : ""}
+${progStartRows ? `<h2>Início da Reunião</h2><table><tbody>${progStartRows}</tbody></table>` : ""}
 
 ${talkRows ? `<h2>Discursos</h2><table><thead><tr><th>Orador</th><th>Tema</th></tr></thead><tbody>${talkRows}</tbody></table>` : ""}
 
@@ -1526,7 +1526,7 @@ ${talkRows ? `<h2>Discursos</h2><table><thead><tr><th>Orador</th><th>Tema</th></
   <th>Candidato</th><th>Batizado por</th><th>Sacerdócio</th><th>Confirmado por</th><th>Testemunha 1</th><th>Testemunha 2</th>
 </tr></thead><tbody>${ordWitRows}</tbody></table>
 
-${progEndRows ? `<h2>Continuação do Programa</h2><table><thead><tr><th>Momento</th><th>Responsável</th></tr></thead><tbody>${progEndRows}</tbody></table>` : ""}
+${progEndRows ? `<h2>Continuação do Programa</h2><table><tbody>${progEndRows}</tbody></table>` : ""}
 
 ${plan.notes ? `<h2>Observações</h2><div class="notes">${_esc(plan.notes)}</div>` : ""}
 <script>window.onload = function(){ window.print(); }<\/script>
