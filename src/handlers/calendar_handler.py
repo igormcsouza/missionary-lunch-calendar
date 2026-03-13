@@ -54,6 +54,35 @@ class CalendarHandler(BaseHTTPRequestHandler):
         """Serve the index.html file."""
         self.send_static("index.html", "text/html; charset=utf-8")
 
+    def _parse_json_body(self):
+        """Read and parse the JSON request body.
+
+        Returns the parsed dict on success, or None after sending a 400 response
+        when the body is missing or contains invalid JSON.
+        """
+        content_length = int(self.headers.get("Content-Length", "0"))
+        raw_body = self.rfile.read(content_length)
+        try:
+            return json.loads(raw_body.decode("utf-8")) if raw_body else {}
+        except json.JSONDecodeError:
+            self.send_json(400, {"status": "error", "error": "Invalid JSON"})
+            return None
+
+    def _require_authenticated_json(self):
+        """Authenticate the request and parse the JSON body.
+
+        Returns ``(user_id, data)`` on success.  On failure, sends the
+        appropriate error response (401 or 400) and returns ``(None, None)``.
+        """
+        user_id = self.get_user_id()
+        if not user_id:
+            self.send_json(401, {"status": "error", "error": "User not authenticated"})
+            return None, None
+        data = self._parse_json_body()
+        if data is None:
+            return None, None
+        return user_id, data
+
     def do_GET(self):  # pylint: disable=invalid-name
         """Handle GET requests for the calendar API."""
         parsed = urlparse(self.path)
@@ -104,16 +133,8 @@ class CalendarHandler(BaseHTTPRequestHandler):
 
     def _handle_post_settings(self):
         """Handle POST /api/settings."""
-        user_id = self.get_user_id()
-        if not user_id:
-            self.send_json(401, {"status": "error", "error": "User not authenticated"})
-            return
-        content_length = int(self.headers.get("Content-Length", "0"))
-        raw_body = self.rfile.read(content_length)
-        try:
-            data = json.loads(raw_body.decode("utf-8")) if raw_body else {}
-        except json.JSONDecodeError:
-            self.send_json(400, {"status": "error", "error": "Invalid JSON"})
+        user_id, data = self._require_authenticated_json()
+        if user_id is None:
             return
         ward = str(data.get("ward", "")).strip()
         settings = self.STORE.load_settings(user_id)
@@ -174,19 +195,9 @@ class CalendarHandler(BaseHTTPRequestHandler):
 
     def _handle_post_calendar(self):  # pylint: disable=too-many-return-statements
         """Handle POST /api/calendar."""
-        user_id = self.get_user_id()
-        if not user_id:
-            self.send_json(401, {"status": "error", "error": "User not authenticated"})
-            return
-
-        content_length = int(self.headers.get("Content-Length", "0"))
-        raw_body = self.rfile.read(content_length)
-
-        try:
-            data = json.loads(raw_body.decode("utf-8")) if raw_body else {}
-        except json.JSONDecodeError:
-            LOGGER.warning("POST /api/calendar invalid json")
-            self.send_json(400, {"status": "error", "error": "Invalid JSON"})
+        user_id, data = self._require_authenticated_json()
+        if user_id is None:
+            LOGGER.warning("POST /api/calendar invalid json or unauthenticated")
             return
 
         day_of_week = str(data.get("day_of_week", "")).strip()

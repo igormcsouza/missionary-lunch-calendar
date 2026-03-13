@@ -1,5 +1,4 @@
 """HTTP request handler extension for the Baptismal Plan feature."""
-import json
 import re
 from urllib.parse import urlparse
 
@@ -104,17 +103,8 @@ class BaptismalPlanHandler(CalendarHandler):
 
     def _handle_update_plan(self, plan_id):
         """Handle PUT /api/baptismal-plans/{planId}."""
-        user_id = self.get_user_id()
-        if not user_id:
-            self.send_json(401, {"status": "error", "error": "User not authenticated"})
-            return
-
-        content_length = int(self.headers.get("Content-Length", "0"))
-        raw_body = self.rfile.read(content_length)
-        try:
-            data = json.loads(raw_body.decode("utf-8")) if raw_body else {}
-        except json.JSONDecodeError:
-            self.send_json(400, {"status": "error", "error": "Invalid JSON"})
+        user_id, data = self._require_authenticated_json()
+        if user_id is None:
             return
 
         plan = self.PLAN_STORE.update_plan(user_id, plan_id, data)
