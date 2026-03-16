@@ -5,6 +5,7 @@
   --ink: #e6edf6;
   --accent: #3bc8b4;
   --subtle: #9cb1c9;
+  --nav-height: 58px;
 }
 
 * {
@@ -16,11 +17,11 @@ body {
   font-family: "Segoe UI", Tahoma, Geneva, Verdana, sans-serif;
   background: radial-gradient(circle at top, #142133 0%, var(--bg) 42%, #0a1018 100%);
   color: var(--ink);
-  padding-top: 58px; /* reserve space for fixed .app-nav-bar */
+  padding-top: var(--nav-height); /* reserve space for fixed .app-nav-bar */
 }
 
 .page {
-  min-height: 100vh;
+  min-height: calc(100vh - var(--nav-height)); /* subtract fixed nav bar height */
   display: flex;
   align-items: center;
   justify-content: center;
