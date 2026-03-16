@@ -30,6 +30,10 @@ class CalendarHandler(DefaultHandler):
             self.send_static("script.js", "application/javascript; charset=utf-8")
             return
 
+        if parsed.path == "/favicon.svg":
+            self.send_static("favicon.svg", "image/svg+xml")
+            return
+
         if parsed.path == "/api/config":
             self.send_json(200, {"dev": self.DEV})
             return

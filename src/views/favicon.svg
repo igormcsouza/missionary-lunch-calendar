@@ -1,0 +1,16 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" width="64" height="64">
+  <!-- Missionary name tag badge -->
+  <rect x="4" y="10" width="56" height="44" rx="4" ry="4" fill="#ffffff" stroke="#1a1a1a" stroke-width="2.5"/>
+  <!-- Black header bar -->
+  <rect x="4" y="10" width="56" height="14" rx="4" ry="0" fill="#1a1a1a"/>
+  <rect x="4" y="17" width="56" height="7" fill="#1a1a1a"/>
+  <!-- Church name text (white, small) -->
+  <text x="32" y="21" font-family="serif" font-size="4.5" fill="#ffffff" text-anchor="middle" font-weight="bold">THE CHURCH OF JESUS CHRIST</text>
+  <!-- "Elder" label -->
+  <text x="32" y="34" font-family="serif" font-size="7" fill="#1a1a1a" text-anchor="middle" font-style="italic">Elder</text>
+  <!-- Name line -->
+  <rect x="10" y="40" width="44" height="2" fill="#1a1a1a"/>
+  <!-- Lanyard clip -->
+  <rect x="27" y="5" width="10" height="7" rx="2" ry="2" fill="#888888" stroke="#555555" stroke-width="1"/>
+  <rect x="30" y="3" width="4" height="5" rx="1" ry="1" fill="#aaaaaa" stroke="#555555" stroke-width="0.8"/>
+</svg>
