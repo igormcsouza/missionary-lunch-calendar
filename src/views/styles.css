@@ -5,6 +5,7 @@
   --ink: #e6edf6;
   --accent: #3bc8b4;
   --subtle: #9cb1c9;
+  --nav-height: 58px;
 }
 
 * {
@@ -369,9 +370,49 @@ tbody td.week-cell {
   stroke: #d9e5f5;
 }
 
+/* ── Nav Bar ─────────────────────────────────────────── */
+
+.app-nav-bar {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  z-index: 100;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 10px 16px;
+}
+
+.app-nav-title {
+  display: none;
+  font-size: 0.95rem;
+  font-weight: 600;
+  color: var(--ink);
+  white-space: nowrap;
+}
+
+.menu-toggle-btn {
+  flex-shrink: 0;
+}
+
 @media (max-width: 900px) {
+  .app-nav-bar {
+    position: static;
+    background: var(--panel);
+    border-bottom: 1px solid var(--line);
+    padding: 8px 12px;
+    width: 100%;
+  }
+
+  .app-nav-title {
+    display: block;
+    flex: 1;
+    text-align: center;
+  }
+
   .page {
-    padding: 60px 10px 10px;
+    padding: 10px;
     align-items: flex-start;
   }
 
@@ -564,13 +605,6 @@ tbody td.week-cell {
 
 /* ── Side Drawer ─────────────────────────────────────── */
 
-.menu-toggle-btn {
-  position: fixed;
-  top: 16px;
-  left: 16px;
-  z-index: 100;
-}
-
 .drawer-backdrop {
   position: fixed;
   inset: 0;
@@ -664,6 +698,35 @@ tbody td.week-cell {
 
 
 /* ── Baptismal Plan View ─────────────────────────────── */
+
+/* Thin, subtle scrollbar for plan panels */
+.bp-plan-list,
+.bp-editor-area {
+  scrollbar-width: thin;
+  scrollbar-color: var(--line) transparent;
+}
+
+.bp-plan-list::-webkit-scrollbar,
+.bp-editor-area::-webkit-scrollbar {
+  width: 5px;
+  height: 5px;
+}
+
+.bp-plan-list::-webkit-scrollbar-track,
+.bp-editor-area::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.bp-plan-list::-webkit-scrollbar-thumb,
+.bp-editor-area::-webkit-scrollbar-thumb {
+  background: var(--line);
+  border-radius: 4px;
+}
+
+.bp-plan-list::-webkit-scrollbar-thumb:hover,
+.bp-editor-area::-webkit-scrollbar-thumb:hover {
+  background: var(--subtle);
+}
 
 .bp-wrap {
   position: fixed;

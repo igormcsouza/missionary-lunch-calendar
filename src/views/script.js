@@ -42,6 +42,7 @@ const loginSpinner = document.getElementById("loginSpinner");
 const googleIcon = document.getElementById("googleIcon");
 const loginBtnText = document.getElementById("loginBtnText");
 const menuToggleBtn = document.getElementById("menuToggleBtn");
+const appNavBar = document.getElementById("appNavBar");
 const sideDrawer = document.getElementById("sideDrawer");
 const drawerBackdrop = document.getElementById("drawerBackdrop");
 const drawerSignOutBtn = document.getElementById("drawerSignOutBtn");
@@ -1579,7 +1580,7 @@ bpNotes.addEventListener("blur", () => { if (bpEditorReady) bpAutoSave(); });
 
   if (DEV_MODE) {
     loginView.classList.add("hidden");
-    menuToggleBtn.classList.remove("hidden");
+    appNavBar.classList.remove("hidden");
     calendarView.classList.remove("hidden");
     updateDrawerUser({ displayName: "local", photoURL: null });
     if (!isCalendarInitialized) {
@@ -1594,7 +1595,7 @@ bpNotes.addEventListener("blur", () => { if (bpEditorReady) bpAutoSave(); });
       if (!user) {
         calendarView.classList.add("hidden");
         baptismalPlanView.classList.add("hidden");
-        menuToggleBtn.classList.add("hidden");
+        appNavBar.classList.add("hidden");
         loginView.classList.remove("hidden");
         loginStatusEl.textContent = "";
         loginSpinner.classList.add("hidden");
@@ -1613,7 +1614,7 @@ bpNotes.addEventListener("blur", () => { if (bpEditorReady) bpAutoSave(); });
       }
 
       loginView.classList.add("hidden");
-      menuToggleBtn.classList.remove("hidden");
+      appNavBar.classList.remove("hidden");
       if (currentRoute === "/baptismal-plan") {
         baptismalPlanView.classList.remove("hidden");
       } else {
