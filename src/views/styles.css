@@ -16,6 +16,7 @@ body {
   font-family: "Segoe UI", Tahoma, Geneva, Verdana, sans-serif;
   background: radial-gradient(circle at top, #142133 0%, var(--bg) 42%, #0a1018 100%);
   color: var(--ink);
+  padding-top: 58px; /* reserve space for fixed .app-nav-bar */
 }
 
 .page {
@@ -379,7 +380,13 @@ tbody td.week-cell {
   }
 
   .app-nav-title {
-    display: inline;
+    display: block;
+    flex: 1;
+    text-align: center;
+  }
+
+  body {
+    padding-top: 0; /* nav bar is in document flow on mobile */
   }
 
   .page {
@@ -580,6 +587,7 @@ tbody td.week-cell {
   position: fixed;
   top: 0;
   left: 0;
+  right: 0;
   z-index: 100;
   display: flex;
   align-items: center;
