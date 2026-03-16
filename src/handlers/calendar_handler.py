@@ -14,20 +14,20 @@ class CalendarHandler(DefaultHandler):
     STORE = None
     DEV = False
 
+    _STATIC_ROUTES = {
+        "/": ("index.html", "text/html; charset=utf-8"),
+        "/styles.css": ("styles.css", "text/css; charset=utf-8"),
+        "/script.js": ("script.js", "application/javascript; charset=utf-8"),
+        "/favicon.svg": ("favicon.svg", "image/svg+xml"),
+    }
+
     def do_GET(self):  # pylint: disable=invalid-name
         """Handle GET requests for the calendar API."""
         parsed = urlparse(self.path)
 
-        if parsed.path == "/":
-            self.send_index()
-            return
-
-        if parsed.path == "/styles.css":
-            self.send_static("styles.css", "text/css; charset=utf-8")
-            return
-
-        if parsed.path == "/script.js":
-            self.send_static("script.js", "application/javascript; charset=utf-8")
+        if parsed.path in self._STATIC_ROUTES:
+            filename, content_type = self._STATIC_ROUTES[parsed.path]
+            self.send_static(filename, content_type)
             return
 
         if parsed.path == "/api/config":
