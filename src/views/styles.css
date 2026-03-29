@@ -520,6 +520,17 @@ tbody td.week-cell {
   -webkit-appearance: none;
   appearance: none;
   width: 100%;
+  height: 14px;
+  background: transparent;
+  border: none;
+  border-radius: 0;
+  padding: 0;
+  outline: none;
+  cursor: pointer;
+  margin: 10px 0 8px;
+}
+
+.couples-range::-webkit-slider-runnable-track {
   height: 2px;
   background: linear-gradient(
     to right,
@@ -529,9 +540,6 @@ tbody td.week-cell {
     #2a394b 100%
   );
   border-radius: 999px;
-  outline: none;
-  cursor: pointer;
-  margin: 10px 0 8px;
 }
 
 .couples-range::-webkit-slider-thumb {
@@ -545,6 +553,21 @@ tbody td.week-cell {
   box-shadow: 0 0 0 1px var(--accent);
   cursor: pointer;
   transition: box-shadow 0.15s, transform 0.15s;
+  margin-top: -6px;
+}
+
+.couples-range::-moz-range-track {
+  height: 2px;
+  background: #2a394b;
+  border: none;
+  border-radius: 999px;
+}
+
+.couples-range::-moz-range-progress {
+  height: 2px;
+  background: var(--accent);
+  border: none;
+  border-radius: 999px;
 }
 
 .couples-range::-moz-range-thumb {
@@ -556,6 +579,10 @@ tbody td.week-cell {
   box-shadow: 0 0 0 1px var(--accent);
   cursor: pointer;
   transition: box-shadow 0.15s, transform 0.15s;
+}
+
+.couples-range::-moz-focus-outer {
+  border: 0;
 }
 
 .couples-range:focus::-webkit-slider-thumb {
