@@ -165,7 +165,7 @@ const calendarTitleEl = document.getElementById("calendarTitle");
 const calendarSubtitleEl = document.getElementById("calendarSubtitle");
 const slotTitleInput = document.getElementById("slotTitleInput");
 const slotSubtitleInput = document.getElementById("slotSubtitleInput");
-const couplesSelect = document.getElementById("couplesSelect");
+const couplesSlider = document.getElementById("couplesSlider");
 
 const DEFAULT_TITLES = [
   "Calendário de Almoço Missionário",
@@ -198,6 +198,13 @@ function updateTopbarSlotButtons() {
 function updateSettingsSlotButtons() {
   document.querySelectorAll(".modal-slot-switcher .slot-btn").forEach((btn) => {
     btn.classList.toggle("active", Number(btn.dataset.settingsProfile) === settingsEditProfile);
+  });
+}
+
+function applyCouplesToUI() {
+  calendarView.dataset.couples = String(currentNumCouples);
+  couplesSlider.querySelectorAll(".couples-btn").forEach((btn) => {
+    btn.classList.toggle("active", Number(btn.dataset.value) === currentNumCouples);
   });
 }
 
@@ -789,6 +796,7 @@ async function loadSettings() {
       currentWard = allSettings.ward || "";
       currentNumCouples = allSettings.num_couples || 2;
       wardInput.value = currentWard;
+      applyCouplesToUI();
       updateHeaderText();
     }
   } catch (err) {
@@ -804,9 +812,11 @@ async function persistSettings() {
   const ward = wardInput.value.trim();
   saveSettingsBtn.disabled = true;
   try {
+    const activeBtn = couplesSlider.querySelector(".couples-btn.active")
+      || couplesSlider.querySelector(".couples-btn");
     const body = {
       ward,
-      num_couples: parseInt(couplesSelect.value, 10) || 2,
+      num_couples: activeBtn ? parseInt(activeBtn.dataset.value, 10) : 2,
       [`slot_${settingsEditProfile}_title`]: slotTitleInput.value.trim(),
       [`slot_${settingsEditProfile}_subtitle`]: slotSubtitleInput.value.trim(),
     };
@@ -822,6 +832,7 @@ async function persistSettings() {
       const newNumCouples = allSettings.num_couples || 2;
       const couplesChanged = newNumCouples !== currentNumCouples;
       currentNumCouples = newNumCouples;
+      applyCouplesToUI();
       settingsModal.classList.add("hidden");
       updateHeaderText();
       if (couplesChanged) {
@@ -842,7 +853,7 @@ monthPicker.addEventListener("change", fetchCalendar);
 downloadBtn.addEventListener("click", downloadCalendarImage);
 settingsBtn.addEventListener("click", () => {
   wardInput.value = currentWard;
-  couplesSelect.value = String(currentNumCouples);
+  applyCouplesToUI();
   settingsEditProfile = currentProfile;
   updateSettingsSlotButtons();
   populateSettingsSlotFields();
@@ -872,6 +883,13 @@ document.querySelectorAll(".modal-slot-switcher .slot-btn").forEach((btn) => {
     settingsEditProfile = Number(btn.dataset.settingsProfile);
     updateSettingsSlotButtons();
     populateSettingsSlotFields();
+  });
+});
+
+couplesSlider.querySelectorAll(".couples-btn").forEach((btn) => {
+  btn.addEventListener("click", () => {
+    couplesSlider.querySelectorAll(".couples-btn").forEach((b) => b.classList.remove("active"));
+    btn.classList.add("active");
   });
 });
 googleLoginBtn.addEventListener("click", async () => {

@@ -33,7 +33,8 @@ body {
   border: 1px solid var(--line);
   border-radius: 14px;
   box-shadow: 0 14px 34px rgba(0, 0, 0, 0.45);
-  padding: 20px;
+  padding: 16px;
+  --row-h: 88px;
 }
 
 .topbar {
@@ -41,7 +42,7 @@ body {
   justify-content: space-between;
   align-items: flex-start;
   gap: 12px;
-  margin-bottom: 16px;
+  margin-bottom: 12px;
 }
 
 .title {
@@ -112,8 +113,8 @@ thead th.week-head {
 tbody td {
   border: 1px solid var(--line);
   vertical-align: top;
-  padding: 6px;
-  height: 88px;
+  padding: 5px;
+  height: var(--row-h);
 }
 
 tbody td.week-cell {
@@ -164,6 +165,29 @@ tbody td.week-cell {
   display: flex;
   flex-direction: column;
   gap: 2px;
+}
+
+/* ── Per-couples-count overrides ─────────────────────── */
+
+.calendar-wrap[data-couples="1"] {
+  --row-h: 70px;
+}
+
+.calendar-wrap[data-couples="3"] {
+  --row-h: 108px;
+}
+
+.calendar-wrap[data-couples="3"] .cell {
+  gap: 2px;
+}
+
+.calendar-wrap[data-couples="3"] .editable-content {
+  gap: 1px;
+}
+
+.calendar-wrap[data-couples="3"] .name-input {
+  padding: 2px 5px;
+  font-size: 0.78rem;
 }
 
 .pday-toggle {
@@ -431,8 +455,7 @@ tbody td.week-cell {
   }
 
   tbody td {
-    height: 90px;
-    padding: 6px;
+    padding: 5px;
   }
 
   .name-input {
@@ -493,16 +516,40 @@ tbody td.week-cell {
   color: var(--ink);
 }
 
-.modal-field select {
-  width: 100%;
+.couples-slider {
+  display: flex;
+  align-items: stretch;
   border: 1px solid var(--line);
   border-radius: 8px;
-  padding: 8px 10px;
-  font-size: 0.95rem;
+  overflow: hidden;
   background: #0f1823;
-  color: var(--ink);
-  color-scheme: dark;
+}
+
+.couples-btn {
+  flex: 1;
+  border: none;
+  border-right: 1px solid var(--line);
+  padding: 9px 8px;
+  font-size: 0.95rem;
+  font-weight: 600;
+  background: transparent;
+  color: var(--subtle);
   cursor: pointer;
+  transition: background 0.12s, color 0.12s;
+}
+
+.couples-btn:last-child {
+  border-right: none;
+}
+
+.couples-btn:hover {
+  background: #213248;
+  color: var(--ink);
+}
+
+.couples-btn.active {
+  background: rgba(59, 200, 180, 0.15);
+  color: var(--accent);
 }
 
 .modal-actions {
