@@ -166,7 +166,6 @@ const calendarSubtitleEl = document.getElementById("calendarSubtitle");
 const slotTitleInput = document.getElementById("slotTitleInput");
 const slotSubtitleInput = document.getElementById("slotSubtitleInput");
 const couplesSlider = document.getElementById("couplesSlider");
-const couplesSliderVal = document.getElementById("couplesSliderVal");
 
 const DEFAULT_TITLES = [
   "Calendário de Almoço Missionário",
@@ -205,7 +204,6 @@ function updateSettingsSlotButtons() {
 function applyCouplesToUI() {
   calendarView.dataset.couples = String(currentNumCouples);
   couplesSlider.value = String(currentNumCouples);
-  couplesSliderVal.textContent = String(currentNumCouples);
   // update gradient fill percentage: (val - min) / (max - min) * 100
   const pct = ((currentNumCouples - 1) / 2) * 100;
   couplesSlider.style.setProperty("--pct", String(pct));
@@ -889,7 +887,6 @@ document.querySelectorAll(".modal-slot-switcher .slot-btn").forEach((btn) => {
 
 couplesSlider.addEventListener("input", () => {
   const val = parseInt(couplesSlider.value, 10);
-  couplesSliderVal.textContent = String(val);
   const pct = ((val - 1) / 2) * 100;
   couplesSlider.style.setProperty("--pct", String(pct));
 });
