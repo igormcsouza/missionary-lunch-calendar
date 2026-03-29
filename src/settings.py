@@ -10,4 +10,4 @@ MAX_APP_PROFILES = 2
 DAYS = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"]
 MAX_DISPLAY_WEEKS = 6
 MAX_OCCURRENCES = 5
-MAX_SLOTS = 2
+MAX_SLOTS = 3

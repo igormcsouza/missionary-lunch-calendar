@@ -165,6 +165,16 @@ class JsonFileStore:
                 clean[key] = value
         return clean
 
+    def _sanitize_settings(self, settings):
+        """Return a sanitized copy of a settings dict, allowing string and int values."""
+        if not isinstance(settings, dict):
+            return {}
+        clean = {}
+        for key, value in settings.items():
+            if isinstance(key, str) and isinstance(value, (str, int)):
+                clean[key] = value
+        return clean
+
     def _entries_field(self, profile):
         """Return the document field name for the given profile (mirrors FirestoreStore)."""
         return "entries" if profile == 1 else f"entries_{profile}"
@@ -193,14 +203,14 @@ class JsonFileStore:
         """Load and return the settings dict for the given user ID."""
         raw = self._read_raw()
         user_doc = self._get_user_doc(raw, user_id)
-        return self._sanitize_entries(user_doc.get("settings", {}))
+        return self._sanitize_settings(user_doc.get("settings", {}))
 
     def save_settings(self, user_id, settings):
         """Persist the settings dict for the given user ID."""
         raw = self._read_raw()
         if not isinstance(raw.get(user_id), dict):
             raw[user_id] = {}
-        raw[user_id]["settings"] = self._sanitize_entries(settings)
+        raw[user_id]["settings"] = self._sanitize_settings(settings)
         self.path.write_text(json.dumps(raw, indent=2), encoding="utf-8")
 
 
@@ -254,6 +264,16 @@ class FirestoreStore:
                 clean[key] = value
         return clean
 
+    def _sanitize_settings(self, settings):
+        """Return a sanitized copy of a settings dict, allowing string and int values."""
+        if not isinstance(settings, dict):
+            return {}
+        clean = {}
+        for key, value in settings.items():
+            if isinstance(key, str) and isinstance(value, (str, int)):
+                clean[key] = value
+        return clean
+
     def _doc_ref(self, user_id):
         return self._client.collection(self._collection_name).document(user_id)
 
@@ -285,12 +305,12 @@ class FirestoreStore:
             return {}
         payload = snapshot.to_dict() or {}
         settings = payload.get("settings", {})
-        return self._sanitize_entries(settings)
+        return self._sanitize_settings(settings)
 
     def save_settings(self, user_id, settings):
         """Persist the settings dict for the given user ID."""
         # merge=["settings"] resets the field to the provided value instead of deep-merging.
-        clean = self._sanitize_entries(settings)
+        clean = self._sanitize_settings(settings)
         self._doc_ref(user_id).set({"settings": clean}, merge=["settings"])
 
 

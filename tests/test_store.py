@@ -70,6 +70,13 @@ class TestJsonFileStoreClearEntry(unittest.TestCase):
         self.store.save_settings("user1", settings)
         self.assertEqual(self.store.load_settings("user1"), {})
 
+    def test_save_and_load_integer_setting(self):
+        """Integer settings values (e.g. num_couples) are persisted and loaded correctly."""
+        self.store.save_settings("user1", {"ward": "TestWard", "num_couples": 3})
+        settings = self.store.load_settings("user1")
+        self.assertEqual(settings["ward"], "TestWard")
+        self.assertEqual(settings["num_couples"], 3)
+
 
 class TestFirestoreStoreClearEntry(unittest.TestCase):
     """Tests that FirestoreStore calls Firestore with field-path merge so that

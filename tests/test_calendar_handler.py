@@ -176,13 +176,24 @@ class TestCalendarHandlerPostCalendar(unittest.TestCase):
         self.assertEqual(payload["status"], "error")
 
     def test_post_calendar_invalid_slot_returns_400(self):
-        """POST /api/calendar with slot=3 returns 400."""
-        body = {"day_of_week": "Tuesday", "occurrence": 1, "slot": 3, "name": "Eve", "profile": 1}
+        """POST /api/calendar with slot=4 returns 400."""
+        body = {"day_of_week": "Tuesday", "occurrence": 1, "slot": 4, "name": "Eve", "profile": 1}
         handler, wfile = _make_handler("POST", "/api/calendar", body=body)
         handler.do_POST()
         status, payload = _parse_response(wfile)
         self.assertEqual(status, 400)
         self.assertEqual(payload["status"], "error")
+
+    def test_post_calendar_slot_three_saves_entry(self):
+        """POST /api/calendar with slot=3 persists a name for the third couple."""
+        body = {"day_of_week": "Tuesday", "occurrence": 1, "slot": 3, "name": "Carol", "profile": 1}
+        handler, wfile = _make_handler("POST", "/api/calendar", body=body)
+        handler.do_POST()
+        status, payload = _parse_response(wfile)
+        self.assertEqual(status, 200)
+        self.assertEqual(payload["status"], "ok")
+        self.assertEqual(payload["saved"]["name"], "Carol")
+        self.assertEqual(payload["saved"]["slot"], 3)
 
     def test_post_calendar_clear_entry(self):
         """POST /api/calendar with an empty name clears the stored entry."""
@@ -308,6 +319,23 @@ class TestCalendarHandlerPostSettings(unittest.TestCase):
         status, payload = _parse_response(wfile)
         self.assertEqual(status, 200)
         self.assertEqual(payload["settings"]["slot_1_title"], "Elders")
+
+    def test_saves_num_couples(self):
+        """POST /api/settings persists a valid num_couples value."""
+        handler, wfile = _make_handler("POST", "/api/settings", body={"num_couples": 3})
+        handler.do_POST()
+        status, payload = _parse_response(wfile)
+        self.assertEqual(status, 200)
+        self.assertEqual(payload["settings"]["num_couples"], 3)
+
+    def test_invalid_num_couples_is_removed(self):
+        """POST /api/settings with out-of-range num_couples removes the key."""
+        CalendarHandler.STORE.save_settings("testuser", {"num_couples": 2})
+        handler, wfile = _make_handler("POST", "/api/settings", body={"num_couples": 99})
+        handler.do_POST()
+        status, payload = _parse_response(wfile)
+        self.assertEqual(status, 200)
+        self.assertNotIn("num_couples", payload["settings"])
 
     def test_missing_user_id_returns_401(self):
         """POST /api/settings without X-User-Id returns 401."""

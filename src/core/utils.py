@@ -5,19 +5,20 @@ from settings import DAYS, MAX_DISPLAY_WEEKS
 
 
 def get_cell_names(entries, occurrence, day_of_week):
-    """Return the first and second slot names for a calendar cell."""
+    """Return the first, second, and third slot names for a calendar cell."""
     if not occurrence:
-        return {"first": "", "second": ""}
+        return {"first": "", "second": "", "third": ""}
 
     base_key = f"{occurrence}:{day_of_week}"
     first = entries.get(f"{base_key}:1", "")
     second = entries.get(f"{base_key}:2", "")
+    third = entries.get(f"{base_key}:3", "")
 
     # Backward compatibility for old single-value data.
     if not first and not second:
         first = entries.get(base_key, "")
 
-    return {"first": first, "second": second}
+    return {"first": first, "second": second, "third": third}
 
 
 def build_day_lookup(year, month):
@@ -58,7 +59,7 @@ def build_calendar_payload(year, month, entries):
             day_number = day_data["day_number"] if day_data else None
             occurrence = day_data["occurrence"] if day_data else None
             if day_name == "Monday":
-                names = {"first": "PDAY", "second": ""}
+                names = {"first": "PDAY", "second": "", "third": ""}
                 editable = False
             else:
                 names = get_cell_names(entries, occurrence, day_name)

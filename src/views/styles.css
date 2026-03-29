@@ -33,7 +33,8 @@ body {
   border: 1px solid var(--line);
   border-radius: 14px;
   box-shadow: 0 14px 34px rgba(0, 0, 0, 0.45);
-  padding: 20px;
+  padding: 16px;
+  --row-h: 88px;
 }
 
 .topbar {
@@ -41,7 +42,7 @@ body {
   justify-content: space-between;
   align-items: flex-start;
   gap: 12px;
-  margin-bottom: 16px;
+  margin-bottom: 12px;
 }
 
 .title {
@@ -112,8 +113,8 @@ thead th.week-head {
 tbody td {
   border: 1px solid var(--line);
   vertical-align: top;
-  padding: 8px;
-  height: 102px;
+  padding: 5px;
+  height: var(--row-h);
 }
 
 tbody td.week-cell {
@@ -129,7 +130,7 @@ tbody td.week-cell {
   height: 100%;
   display: flex;
   flex-direction: column;
-  gap: 8px;
+  gap: 4px;
 }
 
 .meta {
@@ -149,21 +150,44 @@ tbody td.week-cell {
 .name-input {
   width: 100%;
   border: 1px solid var(--line);
-  border-radius: 8px;
-  padding: 7px 8px;
-  font-size: 0.95rem;
+  border-radius: 6px;
+  padding: 3px 6px;
+  font-size: 0.83rem;
   background: #0f1823;
   color: var(--ink);
 }
 
 .name-input.secondary {
-  margin-top: 4px;
+  margin-top: 0;
 }
 
 .editable-content {
   display: flex;
   flex-direction: column;
-  gap: 4px;
+  gap: 2px;
+}
+
+/* ── Per-couples-count overrides ─────────────────────── */
+
+.calendar-wrap[data-couples="1"] {
+  --row-h: 70px;
+}
+
+.calendar-wrap[data-couples="3"] {
+  --row-h: 108px;
+}
+
+.calendar-wrap[data-couples="3"] .cell {
+  gap: 2px;
+}
+
+.calendar-wrap[data-couples="3"] .editable-content {
+  gap: 1px;
+}
+
+.calendar-wrap[data-couples="3"] .name-input {
+  padding: 2px 5px;
+  font-size: 0.78rem;
 }
 
 .pday-toggle {
@@ -431,8 +455,7 @@ tbody td.week-cell {
   }
 
   tbody td {
-    height: 90px;
-    padding: 6px;
+    padding: 5px;
   }
 
   .name-input {
@@ -491,6 +514,92 @@ tbody td.week-cell {
   font-size: 0.95rem;
   background: #0f1823;
   color: var(--ink);
+}
+
+.couples-range {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 100%;
+  height: 14px;
+  background: transparent;
+  border: none;
+  border-radius: 0;
+  padding: 0;
+  outline: none;
+  cursor: pointer;
+  margin: 10px 0 8px;
+}
+
+.couples-range::-webkit-slider-runnable-track {
+  height: 2px;
+  background: linear-gradient(
+    to right,
+    var(--accent) 0%,
+    var(--accent) calc((var(--pct, 50) * 1%)),
+    #2a394b calc((var(--pct, 50) * 1%)),
+    #2a394b 100%
+  );
+  border-radius: 999px;
+}
+
+.couples-range::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 14px;
+  height: 14px;
+  border-radius: 50%;
+  background: var(--accent);
+  border: 1px solid var(--panel);
+  box-shadow: 0 0 0 1px var(--accent);
+  cursor: pointer;
+  transition: box-shadow 0.15s, transform 0.15s;
+  margin-top: -6px;
+}
+
+.couples-range::-moz-range-track {
+  height: 2px;
+  background: #2a394b;
+  border: none;
+  border-radius: 999px;
+}
+
+.couples-range::-moz-range-progress {
+  height: 2px;
+  background: var(--accent);
+  border: none;
+  border-radius: 999px;
+}
+
+.couples-range::-moz-range-thumb {
+  width: 14px;
+  height: 14px;
+  border-radius: 50%;
+  background: var(--accent);
+  border: 1px solid var(--panel);
+  box-shadow: 0 0 0 1px var(--accent);
+  cursor: pointer;
+  transition: box-shadow 0.15s, transform 0.15s;
+}
+
+.couples-range::-moz-focus-outer {
+  border: 0;
+}
+
+.couples-range:focus::-webkit-slider-thumb {
+  box-shadow: 0 0 0 3px rgba(59, 200, 180, 0.25);
+}
+
+.couples-range:hover::-webkit-slider-thumb,
+.couples-range:hover::-moz-range-thumb {
+  transform: scale(1.04);
+}
+
+.couples-range-ticks {
+  display: flex;
+  justify-content: space-between;
+  font-size: 0.78rem;
+  color: var(--subtle);
+  margin: 0 2px;
 }
 
 .modal-actions {

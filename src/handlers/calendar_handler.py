@@ -77,6 +77,17 @@ class CalendarHandler(DefaultHandler):
             settings["ward"] = ward
         else:
             settings.pop("ward", None)
+        # num_couples controls how many missionary couple slots are shown (1–MAX_SLOTS).
+        num_couples_raw = data.get("num_couples")
+        if num_couples_raw is not None:
+            try:
+                num_couples = int(num_couples_raw)
+                if 1 <= num_couples <= MAX_SLOTS:
+                    settings["num_couples"] = num_couples
+                else:
+                    settings.pop("num_couples", None)
+            except (ValueError, TypeError):
+                settings.pop("num_couples", None)
         # Per-profile title and subtitle (only update if key is present in request).
         for app_profile in range(1, MAX_APP_PROFILES + 1):
             for field in ("title", "subtitle"):
@@ -167,7 +178,7 @@ class CalendarHandler(DefaultHandler):
                 "POST /api/calendar invalid slot=%s day_of_week=%s occurrence=%s",
                 slot, day_of_week, occurrence,
             )
-            self.send_json(400, {"status": "error", "error": "slot must be between 1 and 2"})
+            self.send_json(400, {"status": "error", "error": f"slot must be between 1 and {MAX_SLOTS}"})
             return
 
         if not isinstance(profile, int) or profile < 1 or profile > MAX_APP_PROFILES:

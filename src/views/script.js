@@ -53,6 +53,7 @@ const mutedDaysByWeek = {};
 let DEV_MODE = false;
 let isCalendarInitialized = false;
 let currentWard = "";
+let currentNumCouples = 2;
 let currentProfile = 1;
 let settingsEditProfile = 1;
 let allSettings = {};
@@ -164,6 +165,7 @@ const calendarTitleEl = document.getElementById("calendarTitle");
 const calendarSubtitleEl = document.getElementById("calendarSubtitle");
 const slotTitleInput = document.getElementById("slotTitleInput");
 const slotSubtitleInput = document.getElementById("slotSubtitleInput");
+const couplesSlider = document.getElementById("couplesSlider");
 
 const DEFAULT_TITLES = [
   "Calendário de Almoço Missionário",
@@ -197,6 +199,14 @@ function updateSettingsSlotButtons() {
   document.querySelectorAll(".modal-slot-switcher .slot-btn").forEach((btn) => {
     btn.classList.toggle("active", Number(btn.dataset.settingsProfile) === settingsEditProfile);
   });
+}
+
+function applyCouplesToUI() {
+  calendarView.dataset.couples = String(currentNumCouples);
+  couplesSlider.value = String(currentNumCouples);
+  // update gradient fill percentage: (val - min) / (max - min) * 100
+  const pct = ((currentNumCouples - 1) / 2) * 100;
+  couplesSlider.style.setProperty("--pct", String(pct));
 }
 
 function populateSettingsSlotFields() {
@@ -333,7 +343,7 @@ function applyPdayOverridesView() {
     const activeDay = pdayOverrides[weekNumber] || "Monday";
     const mutedDays = mutedDaysByWeek[weekNumber] || {};
     const dayCells = Array.from(row.querySelectorAll("td")).slice(1);
-    let movedNames = ["", ""];
+    let movedNames = ["", "", ""];
     if (activeDay !== "Monday") {
       const targetCell = dayCells.find((cell) => cell.dataset.dayOfWeek === activeDay);
       if (targetCell) {
@@ -341,6 +351,7 @@ function applyPdayOverridesView() {
         movedNames = [
           targetInputs[0] ? targetInputs[0].value.trim() : "",
           targetInputs[1] ? targetInputs[1].value.trim() : "",
+          targetInputs[2] ? targetInputs[2].value.trim() : "",
         ];
       }
     }
@@ -469,13 +480,16 @@ function renderCalendar(weeks) {
 
         const editableContent = document.createElement("div");
         editableContent.className = "editable-content";
-        const firstValue = (cellData.names && cellData.names.first) || cellData.name || "";
-        const secondValue = (cellData.names && cellData.names.second) || "";
-        for (let slot = 1; slot <= 2; slot += 1) {
+        const slotValues = [
+          (cellData.names && cellData.names.first) || cellData.name || "",
+          (cellData.names && cellData.names.second) || "",
+          (cellData.names && cellData.names.third) || "",
+        ];
+        for (let slot = 1; slot <= currentNumCouples; slot += 1) {
           const input = document.createElement("input");
-          input.className = slot === 2 ? "name-input secondary" : "name-input";
+          input.className = slot > 1 ? "name-input secondary" : "name-input";
           input.type = "text";
-          input.value = slot === 1 ? firstValue : secondValue;
+          input.value = slotValues[slot - 1];
           input.placeholder = `Digite um nome (${slot})`;
           input.addEventListener("change", () => {
             if (cellData.occurrence) {
@@ -549,14 +563,15 @@ function collectCalendarSnapshot() {
       const fixedNameEl = cell.querySelector(".fixed-name");
       const inputEls = Array.from(cell.querySelectorAll("input"));
       const dayNumber = dayNumberEl ? dayNumberEl.textContent.trim() : "-";
-      let names = ["", ""];
+      let names = ["", "", ""];
       if (inputEls.length > 0) {
         names = [
           inputEls[0] ? inputEls[0].value.trim() : "",
           inputEls[1] ? inputEls[1].value.trim() : "",
+          inputEls[2] ? inputEls[2].value.trim() : "",
         ];
       } else if (fixedNameEl) {
-        names = [fixedNameEl.textContent.trim(), ""];
+        names = [fixedNameEl.textContent.trim(), "", ""];
       }
       return { dayNumber, names };
     });
@@ -579,7 +594,7 @@ function downloadCalendarImage() {
     const mutedDays = mutedDaysByWeek[weekNumber] || {};
     for (let d = 0; d < DAYS.length; d += 1) {
       if (mutedDays[DAYS[d]]) {
-        exportSourceWeeks[w].cells[d].names = ["", ""];
+        exportSourceWeeks[w].cells[d].names = ["", "", ""];
       }
     }
   }
@@ -602,8 +617,8 @@ function downloadCalendarImage() {
       continue;
     }
 
-    mondayCell.names = [...(targetCell.names || ["", ""])];
-    targetCell.names = ["PDAY", ""];
+    mondayCell.names = [...(targetCell.names || ["", "", ""])];
+    targetCell.names = ["PDAY", "", ""];
   }
 
   for (let w = 0; w < exportSourceWeeks.length; w += 1) {
@@ -613,7 +628,7 @@ function downloadCalendarImage() {
     for (let d = 0; d < DAYS.length; d += 1) {
       const dayName = DAYS[d];
       if (mutedDays[dayName] && dayName !== targetDay) {
-        exportSourceWeeks[w].cells[d].names = ["", ""];
+        exportSourceWeeks[w].cells[d].names = ["", "", ""];
       }
     }
   }
@@ -691,7 +706,7 @@ function downloadCalendarImage() {
     const rowTop = gridY + headerH + w * rowH;
 
     for (let d = 0; d < DAYS.length; d += 1) {
-      const cell = exportWeeks[w].cells[d] || { dayNumber: "-", names: ["", ""] };
+      const cell = exportWeeks[w].cells[d] || { dayNumber: "-", names: ["", "", ""] };
       const left = gridX + d * dayColW;
       const centerX = left + dayColW / 2;
       const centerY = rowTop + rowH / 2;
@@ -703,14 +718,24 @@ function downloadCalendarImage() {
 
       const firstName = (cell.names && cell.names[0]) || "";
       const secondName = (cell.names && cell.names[1]) || "";
+      const thirdName = (cell.names && cell.names[2]) || "";
       const hasFirst = Boolean(firstName);
       const hasSecond = Boolean(secondName);
+      const hasThird = Boolean(thirdName);
 
       ctx.textAlign = "center";
       if (firstName === "PDAY") {
         ctx.fillStyle = "#0f7b6c";
         ctx.font = "bold 20px Segoe UI, Tahoma, sans-serif";
         ctx.fillText(firstName, centerX, centerY);
+      } else if (hasFirst && hasSecond && hasThird) {
+        ctx.fillStyle = "#138c3f";
+        ctx.font = "bold 15px Segoe UI, Tahoma, sans-serif";
+        ctx.fillText(firstName, centerX, centerY - 20);
+        ctx.fillStyle = "#d6a800";
+        ctx.fillText(secondName, centerX, centerY);
+        ctx.fillStyle = "#1565c0";
+        ctx.fillText(thirdName, centerX, centerY + 20);
       } else if (hasFirst && hasSecond) {
         ctx.fillStyle = "#138c3f";
         ctx.font = "bold 18px Segoe UI, Tahoma, sans-serif";
@@ -718,7 +743,7 @@ function downloadCalendarImage() {
         ctx.fillStyle = "#d6a800";
         ctx.fillText(secondName, centerX, centerY + 12);
       } else {
-        const singleName = hasFirst ? firstName : secondName;
+        const singleName = [firstName, secondName, thirdName].find((n) => n) || "";
         ctx.fillStyle = "#1a2433";
         ctx.font = "bold 20px Segoe UI, Tahoma, sans-serif";
         ctx.fillText(singleName, centerX, centerY);
@@ -745,6 +770,14 @@ function downloadCalendarImage() {
   ctx.fillStyle = "#1a2433";
   ctx.fillText(`${ward} B`, secondLegendX + squareSize + 8, legendY);
 
+  if (currentNumCouples >= 3) {
+    const thirdLegendX = secondLegendX + 150;
+    ctx.fillStyle = "#1565c0";
+    ctx.fillRect(thirdLegendX, legendY - squareSize / 2, squareSize, squareSize);
+    ctx.fillStyle = "#1a2433";
+    ctx.fillText(`${ward} C`, thirdLegendX + squareSize + 8, legendY);
+  }
+
   const link = document.createElement("a");
   link.href = canvas.toDataURL("image/png");
   link.download = `calendar-${dateStamp}.png`;
@@ -762,7 +795,9 @@ async function loadSettings() {
       const data = await resp.json();
       allSettings = data.settings || {};
       currentWard = allSettings.ward || "";
+      currentNumCouples = allSettings.num_couples || 2;
       wardInput.value = currentWard;
+      applyCouplesToUI();
       updateHeaderText();
     }
   } catch (err) {
@@ -780,6 +815,7 @@ async function persistSettings() {
   try {
     const body = {
       ward,
+      num_couples: parseInt(couplesSlider.value, 10) || 2,
       [`slot_${settingsEditProfile}_title`]: slotTitleInput.value.trim(),
       [`slot_${settingsEditProfile}_subtitle`]: slotSubtitleInput.value.trim(),
     };
@@ -792,8 +828,15 @@ async function persistSettings() {
       const data = await resp.json();
       allSettings = data.settings || {};
       currentWard = allSettings.ward || "";
+      const newNumCouples = allSettings.num_couples || 2;
+      const couplesChanged = newNumCouples !== currentNumCouples;
+      currentNumCouples = newNumCouples;
+      applyCouplesToUI();
       settingsModal.classList.add("hidden");
       updateHeaderText();
+      if (couplesChanged) {
+        fetchCalendar();
+      }
       showStatus("Configurações salvas");
     } else {
       showStatus("Erro ao salvar configurações", true);
@@ -809,6 +852,7 @@ monthPicker.addEventListener("change", fetchCalendar);
 downloadBtn.addEventListener("click", downloadCalendarImage);
 settingsBtn.addEventListener("click", () => {
   wardInput.value = currentWard;
+  applyCouplesToUI();
   settingsEditProfile = currentProfile;
   updateSettingsSlotButtons();
   populateSettingsSlotFields();
@@ -839,6 +883,12 @@ document.querySelectorAll(".modal-slot-switcher .slot-btn").forEach((btn) => {
     updateSettingsSlotButtons();
     populateSettingsSlotFields();
   });
+});
+
+couplesSlider.addEventListener("input", () => {
+  const val = parseInt(couplesSlider.value, 10);
+  const pct = ((val - 1) / 2) * 100;
+  couplesSlider.style.setProperty("--pct", String(pct));
 });
 googleLoginBtn.addEventListener("click", async () => {
   loginStatusEl.textContent = "";

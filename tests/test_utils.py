@@ -23,14 +23,15 @@ class TestGetCellNames(unittest.TestCase):
     def test_no_occurrence_returns_empty(self):
         """get_cell_names with no occurrence returns empty strings."""
         result = get_cell_names({}, None, "Tuesday")
-        self.assertEqual(result, {"first": "", "second": ""})
+        self.assertEqual(result, {"first": "", "second": "", "third": ""})
 
     def test_returns_slot_values(self):
-        """get_cell_names returns first and second slot for a given cell."""
-        entries = {"1:Tuesday:1": "Alice", "1:Tuesday:2": "Bob"}
+        """get_cell_names returns first, second, and third slot for a given cell."""
+        entries = {"1:Tuesday:1": "Alice", "1:Tuesday:2": "Bob", "1:Tuesday:3": "Carol"}
         result = get_cell_names(entries, 1, "Tuesday")
         self.assertEqual(result["first"], "Alice")
         self.assertEqual(result["second"], "Bob")
+        self.assertEqual(result["third"], "Carol")
 
     def test_backward_compat_legacy_key(self):
         """get_cell_names falls back to bare legacy key when slot keys are absent."""
@@ -42,7 +43,7 @@ class TestGetCellNames(unittest.TestCase):
     def test_missing_entry_returns_empty_strings(self):
         """get_cell_names returns empty strings when no entry exists for the cell."""
         result = get_cell_names({}, 1, "Tuesday")
-        self.assertEqual(result, {"first": "", "second": ""})
+        self.assertEqual(result, {"first": "", "second": "", "third": ""})
 
 
 class TestBuildDayLookup(unittest.TestCase):
@@ -106,7 +107,7 @@ class TestBuildCalendarPayload(unittest.TestCase):
             if c["day_of_week"] == "Tuesday" and c["occurrence"] == 1
         )
         self.assertEqual(tuesday["name"], "")
-        self.assertEqual(tuesday["names"], {"first": "", "second": ""})
+        self.assertEqual(tuesday["names"], {"first": "", "second": "", "third": ""})
 
 
 class TestConstants(unittest.TestCase):
@@ -118,9 +119,9 @@ class TestConstants(unittest.TestCase):
         self.assertEqual(DAYS[0], "Monday")
         self.assertEqual(DAYS[-1], "Sunday")
 
-    def test_max_slots_is_two(self):
-        """MAX_SLOTS is 2."""
-        self.assertEqual(MAX_SLOTS, 2)
+    def test_max_slots_is_three(self):
+        """MAX_SLOTS is 3."""
+        self.assertEqual(MAX_SLOTS, 3)
 
     def test_max_occurrences_is_five(self):
         """MAX_OCCURRENCES is 5."""
