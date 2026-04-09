@@ -113,7 +113,6 @@ tbody td {
   border: 1px solid var(--line);
   vertical-align: top;
   padding: 8px;
-  min-height: 120px;
   height: 120px;
 }
 
